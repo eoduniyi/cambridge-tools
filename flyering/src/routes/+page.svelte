@@ -28,7 +28,13 @@
 	let animating = $state(false);
 	let currentTheme = $state<ThemeName>('dark');
 
-	// Floating panel state
+	// Mobile state
+	let sheetState = $state<'collapsed' | 'peek' | 'full'>('peek');
+	let sheetDragging = $state(false);
+	let sheetStartY = 0;
+	let sheetStartState: typeof sheetState = 'peek';
+
+	// Desktop floating panel state
 	let codeFloating = $state(false);
 	let floatX = $state(400);
 	let floatY = $state(100);
@@ -38,13 +44,9 @@
 
 	const matrix = buildDistanceMatrix(LOCATIONS);
 
-	$effect(() => {
-		theme.set(currentTheme);
-	});
+	$effect(() => { theme.set(currentTheme); });
 
-	function tokens(): ThemeTokens {
-		return THEMES[currentTheme];
-	}
+	function tokens(): ThemeTokens { return THEMES[currentTheme]; }
 
 	const ALGORITHM_INFO: Record<string, { name: string; complexity: string; description: string; pseudocode: string[] }> = {
 		nearest: {
@@ -110,18 +112,9 @@
 	function solve() {
 		let result: SolverResult;
 		switch (selectedAlgorithm) {
-			case 'brute':
-				result = bruteForce(matrix, startIdx);
-				break;
-			case '2opt': {
-				const nn = nearestNeighbor(matrix, startIdx);
-				result = twoOpt(matrix, nn.route);
-				break;
-			}
-			case 'nearest':
-			default:
-				result = nearestNeighbor(matrix, startIdx);
-				break;
+			case 'brute': result = bruteForce(matrix, startIdx); break;
+			case '2opt': { const nn = nearestNeighbor(matrix, startIdx); result = twoOpt(matrix, nn.route); break; }
+			default: result = nearestNeighbor(matrix, startIdx); break;
 		}
 		solverResult = result;
 		drawRoute(result.route);
@@ -131,41 +124,21 @@
 	function drawRoute(route: number[]) {
 		if (!map) return;
 		if (routeLayer) map.removeLayer(routeLayer);
-
 		const t = tokens();
 		const coords = route.map((idx) => LOCATIONS[idx].coords as [number, number]);
 		coords.push(LOCATIONS[route[0]].coords);
-
-		if (animating) {
-			animateRoute(coords, t);
-		} else {
-			routeLayer = L.polyline(coords, {
-				color: t.text,
-				weight: 1.5,
-				opacity: 0.5,
-				dashArray: '6, 6'
-			}).addTo(map);
-		}
+		if (animating) { animateRoute(coords, t); }
+		else { routeLayer = L.polyline(coords, { color: t.text, weight: 1.5, opacity: 0.5, dashArray: '6, 6' }).addTo(map); }
 	}
 
 	function animateRoute(coords: [number, number][], t: ThemeTokens) {
 		if (!map) return;
 		let i = 0;
 		const drawn: [number, number][] = [coords[0]];
-
-		routeLayer = L.polyline(drawn, {
-			color: t.text,
-			weight: 1.5,
-			opacity: 0.7
-		}).addTo(map);
-
+		routeLayer = L.polyline(drawn, { color: t.text, weight: 1.5, opacity: 0.7 }).addTo(map);
 		const interval = setInterval(() => {
 			i++;
-			if (i >= coords.length) {
-				clearInterval(interval);
-				animating = false;
-				return;
-			}
+			if (i >= coords.length) { clearInterval(interval); animating = false; return; }
 			drawn.push(coords[i]);
 			routeLayer!.setLatLngs(drawn);
 		}, 250);
@@ -177,60 +150,18 @@
 		markers.forEach((marker, idx) => {
 			const loc = LOCATIONS[idx];
 			const isStart = idx === startIdx;
-			const fillColor = loc.legal === 'permitted' ? t.markerBright
-				: loc.legal === 'ask-permission' ? t.markerMid : t.markerDim;
-			marker.setStyle({
-				fillColor,
-				color: isStart ? t.text : 'transparent',
-				weight: isStart ? 2 : 0,
-				radius: isStart ? 8 : 5
-			});
+			const fillColor = loc.legal === 'permitted' ? t.markerBright : loc.legal === 'ask-permission' ? t.markerMid : t.markerDim;
+			marker.setStyle({ fillColor, color: isStart ? t.text : 'transparent', weight: isStart ? 2 : 0, radius: isStart ? 8 : 5 });
 		});
 	}
 
 	function updateMapTheme() {
 		if (!map) return;
 		const t = tokens();
-
 		if (tileLayer) map.removeLayer(tileLayer);
-		tileLayer = L.tileLayer(t.mapTile, {
-			attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-			subdomains: 'abcd',
-			maxZoom: 19
-		}).addTo(map);
-
+		tileLayer = L.tileLayer(t.mapTile, { attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 19 }).addTo(map);
 		updateMarkerStyles();
 		if (solverResult) drawRoute(solverResult.route);
-	}
-
-	function onDragStart(e: MouseEvent) {
-		dragging = true;
-		dragOffsetX = e.clientX - floatX;
-		dragOffsetY = e.clientY - floatY;
-		e.preventDefault();
-	}
-
-	function onDragMove(e: MouseEvent) {
-		if (!dragging) return;
-		floatX = e.clientX - dragOffsetX;
-		floatY = e.clientY - dragOffsetY;
-	}
-
-	function onDragEnd() {
-		dragging = false;
-	}
-
-	function highlightLine(line: string): string {
-		if (!line.trim()) return '&nbsp;';
-		let out = line
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;');
-		out = out.replace(/\b(function|return|while|for|if|in)\b/g, '<span class="kw">$1</span>');
-		out = out.replace(/(\u2190)/g, '<span class="op">$1</span>');
-		out = out.replace(/(\u221E|\u2209|\u2208|\u2216)/g, '<span class="sym">$1</span>');
-		out = out.replace(/^(<span class="kw">function<\/span>) (\w+)/, '$1 <span class="fn">$2</span>');
-		return out;
 	}
 
 	function cycleTheme() {
@@ -240,89 +171,86 @@
 		updateMapTheme();
 	}
 
+	// Sheet touch handling
+	function onSheetTouchStart(e: TouchEvent) {
+		sheetDragging = true;
+		sheetStartY = e.touches[0].clientY;
+		sheetStartState = sheetState;
+	}
+
+	function onSheetTouchMove(e: TouchEvent) {
+		if (!sheetDragging) return;
+		// Don't call preventDefault — touch listeners are passive by default in modern browsers.
+		// We use CSS touch-action: none on the sheet handle instead.
+	}
+
+	function onSheetTouchEnd(e: TouchEvent) {
+		if (!sheetDragging) return;
+		sheetDragging = false;
+		const dy = e.changedTouches[0].clientY - sheetStartY;
+		const threshold = 50;
+
+		if (dy < -threshold) {
+			// Swiped up
+			if (sheetStartState === 'collapsed') sheetState = 'peek';
+			else if (sheetStartState === 'peek') sheetState = 'full';
+		} else if (dy > threshold) {
+			// Swiped down
+			if (sheetStartState === 'full') sheetState = 'peek';
+			else if (sheetStartState === 'peek') sheetState = 'collapsed';
+		}
+	}
+
+	// Desktop drag
+	function onDragStart(e: MouseEvent) { dragging = true; dragOffsetX = e.clientX - floatX; dragOffsetY = e.clientY - floatY; e.preventDefault(); }
+	function onDragMove(e: MouseEvent) { if (!dragging) return; floatX = e.clientX - dragOffsetX; floatY = e.clientY - dragOffsetY; }
+	function onDragEnd() { dragging = false; }
+
+	function highlightLine(line: string): string {
+		if (!line.trim()) return '&nbsp;';
+		let out = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		out = out.replace(/\b(function|return|while|for|if|in)\b/g, '<span class="kw">$1</span>');
+		out = out.replace(/(\u2190)/g, '<span class="op">$1</span>');
+		out = out.replace(/(\u221E|\u2209|\u2208|\u2216)/g, '<span class="sym">$1</span>');
+		out = out.replace(/^(<span class="kw">function<\/span>) (\w+)/, '$1 <span class="fn">$2</span>');
+		return out;
+	}
+
 	onMount(async () => {
 		const L = await import('leaflet');
 		const t = tokens();
-
-		map = L.map('map', {
-			center: CAMBRIDGE_BOUNDS.center,
-			zoom: 14,
-			zoomControl: false
-		});
-
+		map = L.map('map', { center: CAMBRIDGE_BOUNDS.center, zoom: 14, zoomControl: false });
 		L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-		tileLayer = L.tileLayer(t.mapTile, {
-			attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-			subdomains: 'abcd',
-			maxZoom: 19
-		}).addTo(map);
+		tileLayer = L.tileLayer(t.mapTile, { attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 19 }).addTo(map);
 
 		LOCATIONS.forEach((loc, idx) => {
 			const isStart = idx === startIdx;
-			const radius = isStart ? 8 : 5;
-			const fillColor = loc.legal === 'permitted' ? t.markerBright
-				: loc.legal === 'ask-permission' ? t.markerMid : t.markerDim;
-
+			const fillColor = loc.legal === 'permitted' ? t.markerBright : loc.legal === 'ask-permission' ? t.markerMid : t.markerDim;
 			const marker = L.circleMarker(loc.coords, {
-				radius,
-				fillColor,
-				color: isStart ? t.text : 'transparent',
-				weight: isStart ? 2 : 0,
-				opacity: 1,
-				fillOpacity: isStart ? 1 : 0.7
+				radius: isStart ? 8 : 5, fillColor, color: isStart ? t.text : 'transparent',
+				weight: isStart ? 2 : 0, opacity: 1, fillOpacity: isStart ? 1 : 0.7
 			}).addTo(map!);
-
-			const confirmedBadge = loc.confirmed
-				? '<span style="display:inline-block;background:#2a5a3a;color:#fff;font-size:0.6rem;padding:0.1rem 0.35rem;border-radius:2px;margin-top:0.25rem;">confirmed</span>'
-				: '';
-
-			marker.bindPopup(`
-				<div style="color:#1a1a1a;font-family:inherit;min-width:180px;line-height:1.5;">
-					<strong style="font-size:0.85rem;">${loc.name}</strong><br/>
-					<span style="color:#555;font-size:0.8rem;">${loc.neighborhood}</span><br/>
-					<span style="font-size:0.75rem;color:#333;">${loc.notes}</span>
-					${confirmedBadge}
-				</div>
-			`);
-
+			const badge = loc.confirmed ? '<span style="display:inline-block;background:#2a5a3a;color:#fff;font-size:0.6rem;padding:0.1rem 0.35rem;border-radius:2px;margin-top:0.25rem;">confirmed</span>' : '';
+			marker.bindPopup(`<div style="color:#1a1a1a;font-family:inherit;min-width:160px;line-height:1.5;"><strong style="font-size:0.85rem;">${loc.name}</strong><br/><span style="color:#555;font-size:0.75rem;">${loc.neighborhood}</span><br/><span style="font-size:0.7rem;color:#333;">${loc.notes}</span>${badge}</div>`);
 			markers.push(marker);
 		});
-
 		solve();
 	});
 </script>
 
 <svelte:window onmousemove={onDragMove} onmouseup={onDragEnd} />
 
-<main
-	style="
-		--bg: {tokens().bg};
-		--bg-panel: {tokens().bgPanel};
-		--bg-card: {tokens().bgCard};
-		--border: {tokens().border};
-		--border-subtle: {tokens().borderSubtle};
-		--text: {tokens().text};
-		--text-muted: {tokens().textMuted};
-		--text-dim: {tokens().textDim};
-		--accent: {tokens().accent};
-		--code-bg: {tokens().codeBg};
-		--code-text: {tokens().codeText};
-		--code-kw: {tokens().codeKw};
-		--code-op: {tokens().codeOp};
-		--code-sym: {tokens().codeSym};
-		--code-fn: {tokens().codeFn};
-		--code-line-num: {tokens().codeLineNum};
-	"
->
-	<header>
+<main style="--bg:{tokens().bg};--bg-panel:{tokens().bgPanel};--bg-card:{tokens().bgCard};--border:{tokens().border};--border-subtle:{tokens().borderSubtle};--text:{tokens().text};--text-muted:{tokens().textMuted};--text-dim:{tokens().textDim};--accent:{tokens().accent};--code-bg:{tokens().codeBg};--code-text:{tokens().codeText};--code-kw:{tokens().codeKw};--code-op:{tokens().codeOp};--code-sym:{tokens().codeSym};--code-fn:{tokens().codeFn};--code-line-num:{tokens().codeLineNum};">
+
+	<!-- Desktop header -->
+	<header class="desktop-only">
 		<div class="header-content">
 			<h1>The Traveling Flyerperson</h1>
 			<p class="subtitle">Where do I place these flyers in Cambridge, MA?</p>
 		</div>
 		<div class="header-right">
 			<button class="theme-btn" onclick={cycleTheme} title="Switch theme">
-				{currentTheme === 'dark' ? '\u25CF' : currentTheme === 'cambridge' ? '\u25D0' : '\u25CB'}
+				{currentTheme === 'dark' ? '●' : currentTheme === 'cambridge' ? '◐' : '○'}
 				<span class="theme-label">{currentTheme}</span>
 			</button>
 			<a href="https://www.cambridge-dev.org/" class="org" target="_blank" rel="noopener">cambridge-dev.org</a>
@@ -330,43 +258,30 @@
 	</header>
 
 	<div class="layout">
-		<aside class="panel">
-			<!-- Start Point -->
+		<!-- Desktop sidebar -->
+		<aside class="panel desktop-only">
 			<section class="section">
 				<h2>Start</h2>
 				<select class="start-select" bind:value={startIdx} onchange={() => solve()}>
 					{#each LOCATIONS as loc, i}
-						<option value={i}>{loc.name}{loc.confirmed ? ' \u2713' : ''}</option>
+						<option value={i}>{loc.name}{loc.confirmed ? ' ✓' : ''}</option>
 					{/each}
 				</select>
 			</section>
 
-			<!-- Solver Controls -->
 			<section class="section">
 				<h2>Solver</h2>
 				<div class="algorithm-select">
-					{#each [
-						{ value: 'nearest', label: 'Nearest Neighbor' },
-						{ value: '2opt', label: '2-Opt' },
-						{ value: 'brute', label: 'Brute Force' }
-					] as algo}
-						<button
-							class="algo-btn"
-							class:active={selectedAlgorithm === algo.value}
-							onclick={() => { selectedAlgorithm = algo.value as typeof selectedAlgorithm; solve(); }}
-						>{algo.label}</button>
+					{#each [{ value: 'nearest', label: 'Nearest Neighbor' }, { value: '2opt', label: '2-Opt' }, { value: 'brute', label: 'Brute Force' }] as algo}
+						<button class="algo-btn" class:active={selectedAlgorithm === algo.value} onclick={() => { selectedAlgorithm = algo.value as typeof selectedAlgorithm; solve(); }}>{algo.label}</button>
 					{/each}
 				</div>
-
 				<div class="actions">
 					<button class="action-btn" onclick={() => { animating = true; solve(); }}>Animate</button>
-					<button class="action-btn secondary" onclick={() => (showAlgorithm = !showAlgorithm)}>
-						{showAlgorithm ? 'Hide' : 'Show'} algorithm
-					</button>
+					<button class="action-btn secondary" onclick={() => (showAlgorithm = !showAlgorithm)}>{showAlgorithm ? 'Hide' : 'Show'} algorithm</button>
 				</div>
 			</section>
 
-			<!-- Algorithm Detail -->
 			{#if showAlgorithm}
 				<section class="section algorithm-detail">
 					<div class="algo-header-row">
@@ -374,97 +289,52 @@
 							<h2>{ALGORITHM_INFO[selectedAlgorithm].name}</h2>
 							<span class="complexity">{ALGORITHM_INFO[selectedAlgorithm].complexity}</span>
 						</div>
-						<button
-							class="float-btn"
-							onclick={() => (codeFloating = !codeFloating)}
-							title={codeFloating ? 'Dock pseudocode' : 'Float pseudocode'}
-						>
-							{codeFloating ? '\u25A3' : '\u2197'}
-						</button>
+						<button class="float-btn" onclick={() => (codeFloating = !codeFloating)} title={codeFloating ? 'Dock' : 'Float'}>{codeFloating ? '▣' : '↗'}</button>
 					</div>
 					<p class="algo-description">{ALGORITHM_INFO[selectedAlgorithm].description}</p>
-
 					{#if !codeFloating}
 						<div class="pseudocode">
 							{#each ALGORITHM_INFO[selectedAlgorithm].pseudocode as line, i}
-								<div class="code-line">
-									<span class="line-num">{i + 1}</span>
-									<span class="line-content">{@html highlightLine(line)}</span>
-								</div>
+								<div class="code-line"><span class="line-num">{i + 1}</span><span class="line-content">{@html highlightLine(line)}</span></div>
 							{/each}
 						</div>
 					{/if}
 				</section>
 			{/if}
 
-			<!-- Results -->
 			{#if solverResult}
 				<section class="section">
 					<h2>Route</h2>
 					<div class="stats">
-						<div class="stat-row">
-							<span>Distance</span>
-							<span class="stat-value">{solverResult.distance.toFixed(2)} mi</span>
-						</div>
-						<div class="stat-row">
-							<span>Stops</span>
-							<span class="stat-value">{solverResult.route.length}</span>
-						</div>
-						{#if solverResult.iterations}
-							<div class="stat-row">
-								<span>Iterations</span>
-								<span class="stat-value">{solverResult.iterations.toLocaleString()}</span>
-							</div>
-						{/if}
-						<div class="stat-row">
-							<span>Confirmed</span>
-							<span class="stat-value">{LOCATIONS.filter(l => l.confirmed).length} / {LOCATIONS.length}</span>
-						</div>
+						<div class="stat-row"><span>Distance</span><span class="stat-value">{solverResult.distance.toFixed(2)} mi</span></div>
+						<div class="stat-row"><span>Stops</span><span class="stat-value">{solverResult.route.length}</span></div>
+						{#if solverResult.iterations}<div class="stat-row"><span>Iterations</span><span class="stat-value">{solverResult.iterations.toLocaleString()}</span></div>{/if}
+						<div class="stat-row"><span>Confirmed</span><span class="stat-value">{LOCATIONS.filter(l => l.confirmed).length}/{LOCATIONS.length}</span></div>
 					</div>
-
 					<ol class="route-list">
 						{#each solverResult.route as idx, i}
-							<li>
-								<span class="stop-num">{i + 1}</span>
-								<span class="stop-name">
-									{LOCATIONS[idx].name}
-									{#if LOCATIONS[idx].confirmed}
-										<span class="confirmed-badge">\u2713</span>
-									{/if}
-								</span>
-							</li>
+							<li><span class="stop-num">{i + 1}</span><span class="stop-name">{LOCATIONS[idx].name}{#if LOCATIONS[idx].confirmed}<span class="confirmed-badge">✓</span>{/if}</span></li>
 						{/each}
 					</ol>
 					<div class="route-return">Return to {LOCATIONS[startIdx].name}</div>
 				</section>
 			{/if}
 
-			<!-- Legal -->
 			<section class="section">
-				<button class="section-toggle" onclick={() => (showLegal = !showLegal)}>
-					<h2>Legal</h2>
-					<span class="toggle-indicator">{showLegal ? '\u2212' : '+'}</span>
-				</button>
-
+				<button class="section-toggle" onclick={() => (showLegal = !showLegal)}><h2>Legal</h2><span class="toggle-indicator">{showLegal ? '−' : '+'}</span></button>
 				{#if showLegal}
 					<div class="legal-list">
 						{#each LEGAL_RULES as rule}
 							<div class="legal-item">
-								<div class="legal-header">
-									<span class="legal-title">{rule.title}</span>
-									<span class="legal-category" class:prohibited={rule.category === 'prohibited'} class:permitted={rule.category === 'permitted'}>{rule.category}</span>
-								</div>
+								<div class="legal-header"><span class="legal-title">{rule.title}</span><span class="legal-category" class:prohibited={rule.category === 'prohibited'} class:permitted={rule.category === 'permitted'}>{rule.category}</span></div>
 								<p class="legal-desc">{rule.description}</p>
-								{#if rule.penalty}
-									<span class="legal-penalty">{rule.penalty}</span>
-								{/if}
+								{#if rule.penalty}<span class="legal-penalty">{rule.penalty}</span>{/if}
 							</div>
 						{/each}
 					</div>
 				{/if}
 			</section>
 
-			<!-- Legend -->
 			<section class="section legend">
 				<h2>Map</h2>
 				<div class="legend-items">
@@ -476,27 +346,113 @@
 			</section>
 		</aside>
 
+		<!-- Map (full screen on mobile) -->
 		<div id="map"></div>
+
+		<!-- Mobile FABs -->
+		<div class="fab-group mobile-only">
+			<button class="fab" onclick={cycleTheme} title="Theme">
+				{currentTheme === 'dark' ? '●' : currentTheme === 'cambridge' ? '◐' : '○'}
+			</button>
+			<button class="fab" onclick={() => { animating = true; solve(); }} title="Solve & Animate">
+				▶
+			</button>
+			<button class="fab" onclick={() => (showAlgorithm = !showAlgorithm)} title="Algorithm">
+				λ
+			</button>
+		</div>
+
+		<!-- Mobile bottom sheet -->
+		<div
+			class="sheet mobile-only"
+			class:collapsed={sheetState === 'collapsed'}
+			class:peek={sheetState === 'peek'}
+			class:full={sheetState === 'full'}
+			role="region"
+			aria-label="Route details"
+		>
+			<div
+				class="sheet-handle"
+				ontouchstart={onSheetTouchStart}
+				ontouchmove={onSheetTouchMove}
+				ontouchend={onSheetTouchEnd}
+				role="slider"
+				aria-label="Drag to resize panel"
+				tabindex="0"
+			>
+				<div class="handle-bar"></div>
+			</div>
+
+			<div class="sheet-content">
+				<!-- Quick stats bar (always visible in peek) -->
+				{#if solverResult}
+					<div class="sheet-stats">
+						<span class="sheet-stat">{solverResult.distance.toFixed(1)} mi</span>
+						<span class="sheet-stat-sep">·</span>
+						<span class="sheet-stat">{solverResult.route.length} stops</span>
+						<span class="sheet-stat-sep">·</span>
+						<span class="sheet-stat">{LOCATIONS.filter(l => l.confirmed).length} confirmed</span>
+					</div>
+				{/if}
+
+				<!-- Algorithm selector (compact) -->
+				<div class="sheet-algo-row">
+					{#each [{ value: 'nearest', label: 'NN' }, { value: '2opt', label: '2-Opt' }, { value: 'brute', label: 'BF' }] as algo}
+						<button class="sheet-algo-btn" class:active={selectedAlgorithm === algo.value} onclick={() => { selectedAlgorithm = algo.value as typeof selectedAlgorithm; solve(); }}>{algo.label}</button>
+					{/each}
+				</div>
+
+				<!-- Start selector -->
+				<select class="start-select" bind:value={startIdx} onchange={() => solve()}>
+					{#each LOCATIONS as loc, i}
+						<option value={i}>{loc.name}{loc.confirmed ? ' ✓' : ''}</option>
+					{/each}
+				</select>
+
+				<!-- Route list (scrollable in full) -->
+				{#if solverResult}
+					<ol class="route-list">
+						{#each solverResult.route as idx, i}
+							<li>
+								<span class="stop-num">{i + 1}</span>
+								<span class="stop-name">{LOCATIONS[idx].name}{#if LOCATIONS[idx].confirmed}<span class="confirmed-badge">✓</span>{/if}</span>
+							</li>
+						{/each}
+					</ol>
+				{/if}
+			</div>
+		</div>
+
+		<!-- Mobile algorithm overlay -->
+		{#if showAlgorithm}
+			<div class="overlay mobile-only" role="dialog" aria-label="Algorithm details">
+				<div class="overlay-card">
+					<div class="overlay-header">
+						<h3>{ALGORITHM_INFO[selectedAlgorithm].name}</h3>
+						<button class="overlay-close" onclick={() => (showAlgorithm = false)}>&times;</button>
+					</div>
+					<span class="complexity">{ALGORITHM_INFO[selectedAlgorithm].complexity}</span>
+					<p class="algo-description">{ALGORITHM_INFO[selectedAlgorithm].description}</p>
+					<div class="pseudocode">
+						{#each ALGORITHM_INFO[selectedAlgorithm].pseudocode as line, i}
+							<div class="code-line"><span class="line-num">{i + 1}</span><span class="line-content">{@html highlightLine(line)}</span></div>
+						{/each}
+					</div>
+				</div>
+			</div>
+		{/if}
 	</div>
 
-	<!-- Floating pseudocode panel -->
+	<!-- Desktop floating panel -->
 	{#if codeFloating && showAlgorithm}
-		<div
-			class="floating-code"
-			style="left: {floatX}px; top: {floatY}px;"
-			role="dialog"
-			aria-label="Pseudocode"
-		>
+		<div class="floating-code desktop-only" style="left:{floatX}px;top:{floatY}px;" role="dialog" aria-label="Pseudocode">
 			<div class="floating-header" role="toolbar" aria-label="Drag to reposition" onmousedown={onDragStart}>
 				<span class="floating-title">{ALGORITHM_INFO[selectedAlgorithm].name}</span>
 				<button class="floating-close" onclick={() => (codeFloating = false)}>&times;</button>
 			</div>
 			<div class="floating-body">
 				{#each ALGORITHM_INFO[selectedAlgorithm].pseudocode as line, i}
-					<div class="code-line">
-						<span class="line-num">{i + 1}</span>
-						<span class="line-content">{@html highlightLine(line)}</span>
-					</div>
+					<div class="code-line"><span class="line-num">{i + 1}</span><span class="line-content">{@html highlightLine(line)}</span></div>
 				{/each}
 			</div>
 		</div>
@@ -504,114 +460,73 @@
 </main>
 
 <style>
+	/* ===== Base ===== */
 	main {
 		height: 100vh;
+		height: 100dvh;
 		display: flex;
 		flex-direction: column;
 		background: var(--bg);
 		color: var(--text);
 		transition: background 0.2s, color 0.2s;
-	}
-
-	header {
-		padding: 1.25rem 2rem;
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		border-bottom: 1px solid var(--border);
-	}
-
-	h1 {
-		margin: 0;
-		font-size: 1.1rem;
-		font-weight: 500;
-		letter-spacing: -0.01em;
-		color: var(--text);
-	}
-
-	.subtitle {
-		margin: 0.2rem 0 0;
-		color: var(--text-dim);
-		font-size: 0.8rem;
-	}
-
-	.header-right {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-	}
-
-	.theme-btn {
-		background: none;
-		border: 1px solid var(--border);
-		color: var(--text-dim);
-		padding: 0.35rem 0.6rem;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 0.75rem;
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		transition: all 0.15s;
-	}
-
-	.theme-btn:hover {
-		color: var(--text);
-		border-color: var(--text-muted);
-	}
-
-	.theme-label {
-		text-transform: capitalize;
-	}
-
-	.org {
-		color: var(--text-dim);
-		font-size: 0.75rem;
-		text-decoration: none;
-		transition: color 0.15s;
-	}
-
-	.org:hover {
-		color: var(--text);
+		overflow: hidden;
 	}
 
 	.layout {
 		display: flex;
 		flex: 1;
 		overflow: hidden;
+		position: relative;
 	}
 
+	#map {
+		flex: 1;
+		min-height: 0;
+		z-index: 1;
+	}
+
+	h1 { margin: 0; font-size: 1.1rem; font-weight: 500; letter-spacing: -0.01em; color: var(--text); }
+	h2 { margin: 0 0 0.75rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); font-weight: 500; }
+	h3 { margin: 0; font-size: 0.9rem; font-weight: 500; color: var(--text); }
+
+	/* ===== Responsive visibility ===== */
+	.desktop-only { display: flex; }
+	.mobile-only { display: none; }
+
+	@media (max-width: 768px) {
+		.desktop-only { display: none !important; }
+		.mobile-only { display: flex; }
+	}
+
+	/* ===== Desktop header ===== */
+	header {
+		padding: 1.25rem 2rem;
+		align-items: baseline;
+		justify-content: space-between;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.subtitle { margin: 0.2rem 0 0; color: var(--text-dim); font-size: 0.8rem; }
+	.header-right { display: flex; align-items: center; gap: 1rem; }
+	.theme-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); padding: 0.35rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; gap: 0.4rem; transition: all 0.15s; }
+	.theme-btn:hover { color: var(--text); border-color: var(--text-muted); }
+	.theme-label { text-transform: capitalize; }
+	.org { color: var(--text-dim); font-size: 0.75rem; text-decoration: none; transition: color 0.15s; }
+	.org:hover { color: var(--text); }
+
+	/* ===== Desktop sidebar ===== */
 	aside.panel {
 		width: 380px;
 		padding: 1.5rem 2rem;
 		overflow-y: auto;
 		border-right: 1px solid var(--border);
 		background: var(--bg-panel);
-		display: flex;
 		flex-direction: column;
 		gap: 2rem;
 	}
 
-	#map {
-		flex: 1;
-		min-height: 0;
-	}
+	.section { display: flex; flex-direction: column; }
 
-	.section {
-		display: flex;
-		flex-direction: column;
-	}
-
-	h2 {
-		margin: 0 0 0.75rem;
-		font-size: 0.7rem;
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-		color: var(--text-dim);
-		font-weight: 500;
-	}
-
-	/* Start select */
 	.start-select {
 		width: 100%;
 		padding: 0.5rem 0.75rem;
@@ -626,443 +541,264 @@
 		background-repeat: no-repeat;
 		background-position: right 0.75rem center;
 	}
+	.start-select:focus { outline: none; border-color: var(--text-muted); }
 
-	.start-select:focus {
-		outline: none;
-		border-color: var(--text-muted);
-	}
+	.algorithm-select { display: flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+	.algo-btn { flex: 1; background: transparent; border: none; border-right: 1px solid var(--border); color: var(--text-dim); padding: 0.6rem 0.5rem; font-size: 0.75rem; cursor: pointer; transition: all 0.15s; }
+	.algo-btn:last-child { border-right: none; }
+	.algo-btn:hover { color: var(--text-muted); }
+	.algo-btn.active { background: var(--bg-card); color: var(--text); }
 
-	/* Algorithm selector */
-	.algorithm-select {
-		display: flex;
-		gap: 0;
-		border: 1px solid var(--border);
-		border-radius: 4px;
-		overflow: hidden;
-	}
-
-	.algo-btn {
-		flex: 1;
-		background: transparent;
-		border: none;
-		border-right: 1px solid var(--border);
-		color: var(--text-dim);
-		padding: 0.6rem 0.5rem;
-		font-size: 0.75rem;
-		cursor: pointer;
-		transition: all 0.15s;
-	}
-
-	.algo-btn:last-child {
-		border-right: none;
-	}
-
-	.algo-btn:hover {
-		color: var(--text-muted);
-	}
-
-	.algo-btn.active {
-		background: var(--bg-card);
-		color: var(--text);
-	}
-
-	.actions {
-		display: flex;
-		gap: 0.5rem;
-		margin-top: 1rem;
-	}
-
-	.action-btn {
-		background: transparent;
-		border: 1px solid var(--border);
-		color: var(--text-muted);
-		padding: 0.5rem 0.75rem;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 0.75rem;
-		transition: all 0.15s;
-	}
-
-	.action-btn:hover {
-		border-color: var(--text-muted);
-		color: var(--text);
-	}
-
-	.action-btn.secondary {
-		border-color: transparent;
-		color: var(--text-dim);
-	}
-
-	.action-btn.secondary:hover {
-		color: var(--text-muted);
-	}
+	.actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
+	.action-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 0.5rem 0.75rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem; transition: all 0.15s; }
+	.action-btn:hover { border-color: var(--text-muted); color: var(--text); }
+	.action-btn.secondary { border-color: transparent; color: var(--text-dim); }
+	.action-btn.secondary:hover { color: var(--text-muted); }
 
 	/* Algorithm detail */
-	.algorithm-detail {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: 6px;
-		padding: 1.5rem;
-		overflow: hidden;
-	}
+	.algorithm-detail { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 1.5rem; overflow: hidden; }
+	.algo-header-row { display: flex; align-items: flex-start; justify-content: space-between; }
+	.algorithm-detail h2 { color: var(--text); font-size: 0.85rem; text-transform: none; letter-spacing: -0.01em; font-weight: 500; margin-bottom: 0.2rem; font-family: 'Georgia', serif; }
+	.complexity { font-size: 0.7rem; color: var(--text-dim); font-family: 'SF Mono', 'Fira Code', monospace; }
+	.float-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); width: 1.6rem; height: 1.6rem; border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; transition: all 0.15s; flex-shrink: 0; }
+	.float-btn:hover { color: var(--text); border-color: var(--text-muted); }
+	.algo-description { margin: 0.75rem 0 1rem; font-size: 0.8rem; line-height: 1.65; color: var(--text-muted); text-align: justify; hyphens: auto; font-family: 'Georgia', serif; }
 
-	.algo-header-row {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-	}
+	/* Pseudocode */
+	.pseudocode { padding: 1rem 0; border-top: 1px solid var(--border); overflow-x: auto; max-width: 100%; }
+	.code-line { display: flex; align-items: baseline; gap: 0.75rem; line-height: 1.9; }
+	.line-num { width: 1.2rem; min-width: 1.2rem; text-align: right; font-size: 0.6rem; color: var(--code-line-num); font-family: 'SF Mono', 'Fira Code', monospace; flex-shrink: 0; user-select: none; }
+	.line-content { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.72rem; color: var(--code-text); white-space: pre; }
+	:global(.code-line .kw) { color: var(--code-kw); font-weight: 500; }
+	:global(.code-line .op) { color: var(--code-op); }
+	:global(.code-line .sym) { color: var(--code-sym); font-style: italic; }
+	:global(.code-line .fn) { color: var(--code-fn); }
 
-	.algorithm-detail h2 {
-		color: var(--text);
-		font-size: 0.85rem;
-		text-transform: none;
-		letter-spacing: -0.01em;
-		font-weight: 500;
-		margin-bottom: 0.2rem;
-		font-family: 'Georgia', 'Times New Roman', serif;
-	}
-
-	.complexity {
-		font-size: 0.7rem;
-		color: var(--text-dim);
-		font-family: 'SF Mono', 'Fira Code', monospace;
-	}
-
-	.float-btn {
-		background: none;
-		border: 1px solid var(--border);
-		color: var(--text-dim);
-		width: 1.6rem;
-		height: 1.6rem;
-		border-radius: 3px;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 0.8rem;
-		transition: all 0.15s;
-		flex-shrink: 0;
-	}
-
-	.float-btn:hover {
-		color: var(--text);
-		border-color: var(--text-muted);
-	}
-
-	.algo-description {
-		margin: 0.75rem 0 1rem;
-		font-size: 0.8rem;
-		line-height: 1.65;
-		color: var(--text-muted);
-		text-align: justify;
-		hyphens: auto;
-		font-family: 'Georgia', 'Times New Roman', serif;
-	}
-
-	/* Pseudocode block */
-	.pseudocode {
-		padding: 1rem 0;
-		border-top: 1px solid var(--border);
-		overflow-x: auto;
-		max-width: 100%;
-	}
-
-	.code-line {
-		display: flex;
-		align-items: baseline;
-		gap: 0.75rem;
-		line-height: 1.9;
-	}
-
-	.line-num {
-		width: 1.2rem;
-		min-width: 1.2rem;
-		text-align: right;
-		font-size: 0.6rem;
-		color: var(--code-line-num);
-		font-family: 'SF Mono', 'Fira Code', monospace;
-		flex-shrink: 0;
-		user-select: none;
-	}
-
-	.line-content {
-		font-family: 'SF Mono', 'Fira Code', monospace;
-		font-size: 0.72rem;
-		color: var(--code-text);
-		white-space: pre;
-	}
-
-	:global(.code-line .kw) {
-		color: var(--code-kw);
-		font-weight: 500;
-	}
-
-	:global(.code-line .op) {
-		color: var(--code-op);
-	}
-
-	:global(.code-line .sym) {
-		color: var(--code-sym);
-		font-style: italic;
-	}
-
-	:global(.code-line .fn) {
-		color: var(--code-fn);
-	}
-
-	/* Floating panel */
-	.floating-code {
-		position: fixed;
-		z-index: 9999;
-		background: var(--bg);
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-		min-width: 280px;
-		max-width: 420px;
-	}
-
-	.floating-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 0.6rem 1rem;
-		border-bottom: 1px solid var(--border);
-		cursor: grab;
-		user-select: none;
-	}
-
-	.floating-header:active {
-		cursor: grabbing;
-	}
-
-	.floating-title {
-		font-size: 0.7rem;
-		color: var(--text-dim);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-
-	.floating-close {
-		background: none;
-		border: none;
-		color: var(--text-dim);
-		font-size: 1.1rem;
-		cursor: pointer;
-		padding: 0;
-		line-height: 1;
-	}
-
-	.floating-close:hover {
-		color: var(--text);
-	}
-
-	.floating-body {
-		padding: 1rem 1.25rem;
-		overflow-x: auto;
-	}
-
-	/* Stats */
-	.stats {
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-		margin-bottom: 1rem;
-	}
-
-	.stat-row {
-		display: flex;
-		justify-content: space-between;
-		font-size: 0.8rem;
-		color: var(--text-dim);
-	}
-
-	.stat-value {
-		color: var(--text);
-		font-family: 'SF Mono', 'Fira Code', monospace;
-		font-size: 0.75rem;
-	}
-
-	/* Route list */
-	.route-list {
-		margin: 0;
-		padding: 0;
-		list-style: none;
-		display: flex;
-		flex-direction: column;
-		gap: 0.1rem;
-	}
-
-	.route-list li {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		padding: 0.35rem 0;
-		font-size: 0.78rem;
-		border-bottom: 1px solid var(--border-subtle);
-	}
-
-	.route-list li:last-child {
-		border-bottom: none;
-	}
-
-	.stop-num {
-		width: 1.4rem;
-		height: 1.4rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 0.65rem;
-		color: var(--text-dim);
-		border: 1px solid var(--border);
-		border-radius: 50%;
-		flex-shrink: 0;
-	}
-
-	.stop-name {
-		color: var(--text-muted);
-		font-size: 0.78rem;
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-	}
-
-	.confirmed-badge {
-		font-size: 0.65rem;
-		color: var(--accent);
-		opacity: 0.7;
-	}
-
-	.route-return {
-		margin-top: 0.5rem;
-		font-size: 0.7rem;
-		color: var(--text-dim);
-		font-style: italic;
-		opacity: 0.6;
-	}
+	/* Stats & route */
+	.stats { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 1rem; }
+	.stat-row { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim); }
+	.stat-value { color: var(--text); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.75rem; }
+	.route-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.1rem; }
+	.route-list li { display: flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0; font-size: 0.78rem; border-bottom: 1px solid var(--border-subtle); }
+	.route-list li:last-child { border-bottom: none; }
+	.stop-num { width: 1.4rem; height: 1.4rem; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--text-dim); border: 1px solid var(--border); border-radius: 50%; flex-shrink: 0; }
+	.stop-name { color: var(--text-muted); font-size: 0.78rem; display: flex; align-items: center; gap: 0.4rem; }
+	.confirmed-badge { font-size: 0.65rem; color: var(--accent); opacity: 0.7; }
+	.route-return { margin-top: 0.5rem; font-size: 0.7rem; color: var(--text-dim); font-style: italic; opacity: 0.6; }
 
 	/* Legal */
-	.section-toggle {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		width: 100%;
-		background: none;
-		border: none;
-		padding: 0;
-		cursor: pointer;
-		color: inherit;
-	}
-
-	.section-toggle h2 {
-		margin: 0;
-	}
-
-	.toggle-indicator {
-		color: var(--text-dim);
-		font-size: 1rem;
-	}
-
-	.legal-list {
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-		margin-top: 0.75rem;
-	}
-
-	.legal-item {
-		display: flex;
-		flex-direction: column;
-		gap: 0.2rem;
-	}
-
-	.legal-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.legal-title {
-		font-size: 0.8rem;
-		color: var(--text);
-		font-weight: 500;
-		font-family: 'Georgia', 'Times New Roman', serif;
-	}
-
-	.legal-category {
-		font-size: 0.6rem;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		color: var(--text-dim);
-	}
-
-	.legal-category.prohibited {
-		color: var(--text-muted);
-	}
-
-	.legal-category.permitted {
-		color: var(--text-dim);
-	}
-
-	.legal-desc {
-		margin: 0.15rem 0 0;
-		font-size: 0.75rem;
-		line-height: 1.55;
-		color: var(--text-dim);
-		text-align: justify;
-		hyphens: auto;
-		font-family: 'Georgia', 'Times New Roman', serif;
-	}
-
-	.legal-penalty {
-		font-size: 0.7rem;
-		color: var(--text-muted);
-		font-family: 'SF Mono', 'Fira Code', monospace;
-		margin-top: 0.15rem;
-	}
+	.section-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; background: none; border: none; padding: 0; cursor: pointer; color: inherit; }
+	.section-toggle h2 { margin: 0; }
+	.toggle-indicator { color: var(--text-dim); font-size: 1rem; }
+	.legal-list { display: flex; flex-direction: column; gap: 1.25rem; margin-top: 0.75rem; }
+	.legal-item { display: flex; flex-direction: column; gap: 0.2rem; }
+	.legal-header { display: flex; align-items: center; justify-content: space-between; }
+	.legal-title { font-size: 0.8rem; color: var(--text); font-weight: 500; font-family: 'Georgia', serif; }
+	.legal-category { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
+	.legal-category.prohibited { color: var(--text-muted); }
+	.legal-category.permitted { color: var(--text-dim); }
+	.legal-desc { margin: 0.15rem 0 0; font-size: 0.75rem; line-height: 1.55; color: var(--text-dim); text-align: justify; hyphens: auto; font-family: 'Georgia', serif; }
+	.legal-penalty { font-size: 0.7rem; color: var(--text-muted); font-family: 'SF Mono', 'Fira Code', monospace; margin-top: 0.15rem; }
 
 	/* Legend */
-	.legend {
-		margin-top: auto;
-		padding-top: 1rem;
-		border-top: 1px solid var(--border-subtle);
+	.legend { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-subtle); }
+	.legend-items { display: flex; flex-direction: column; gap: 0.4rem; }
+	.legend-row { display: flex; align-items: center; gap: 0.6rem; font-size: 0.75rem; color: var(--text-dim); }
+	.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+	.legend-dot.start { background: var(--text); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--text); }
+	.legend-dot.bright { background: var(--text); }
+	.legend-dot.mid { background: var(--text-muted); }
+	.legend-dot.dim { background: var(--text-dim); }
+
+	/* Desktop floating panel */
+	.floating-code { position: fixed; z-index: 9999; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); min-width: 280px; max-width: 420px; }
+	.floating-header { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); cursor: grab; user-select: none; }
+	.floating-header:active { cursor: grabbing; }
+	.floating-title { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+	.floating-close { background: none; border: none; color: var(--text-dim); font-size: 1.1rem; cursor: pointer; padding: 0; line-height: 1; }
+	.floating-close:hover { color: var(--text); }
+	.floating-body { padding: 1rem 1.25rem; overflow-x: auto; }
+
+	/* ===== Mobile: FABs ===== */
+	.fab-group {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		flex-direction: column;
+		gap: 0.6rem;
+		z-index: 100;
 	}
 
-	.legend-items {
+	.fab {
+		width: 2.75rem;
+		height: 2.75rem;
+		border-radius: 50%;
+		background: var(--bg);
+		border: 1px solid var(--border);
+		color: var(--text);
+		font-size: 1rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+		transition: all 0.15s;
+	}
+
+	.fab:active {
+		transform: scale(0.92);
+	}
+
+	/* ===== Mobile: Bottom Sheet ===== */
+	.sheet {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		z-index: 200;
+		background: var(--bg-panel);
+		border-top: 1px solid var(--border);
+		border-radius: 16px 16px 0 0;
+		flex-direction: column;
+		transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		max-height: 75vh;
+		touch-action: none;
+	}
+
+	.sheet.collapsed {
+		transform: translateY(calc(100% - 2rem));
+	}
+
+	.sheet.peek {
+		transform: translateY(calc(100% - 10rem));
+	}
+
+	.sheet.full {
+		transform: translateY(0);
+	}
+
+	.sheet-handle {
+		display: flex;
+		justify-content: center;
+		padding: 0.6rem 0 0.4rem;
+		cursor: grab;
+		touch-action: none;
+	}
+
+	.handle-bar {
+		width: 2.5rem;
+		height: 4px;
+		border-radius: 2px;
+		background: var(--border);
+	}
+
+	.sheet-content {
+		padding: 0.5rem 1.25rem 1.5rem;
+		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.sheet-stats {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: 0.8rem;
+		color: var(--text-muted);
+		font-family: 'SF Mono', 'Fira Code', monospace;
+	}
+
+	.sheet-stat-sep {
+		color: var(--text-dim);
+	}
+
+	.sheet-algo-row {
+		display: flex;
 		gap: 0.4rem;
 	}
 
-	.legend-row {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		font-size: 0.75rem;
+	.sheet-algo-btn {
+		flex: 1;
+		padding: 0.5rem;
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		background: transparent;
 		color: var(--text-dim);
+		font-size: 0.75rem;
+		cursor: pointer;
+		transition: all 0.15s;
 	}
 
-	.legend-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		flex-shrink: 0;
+	.sheet-algo-btn.active {
+		background: var(--bg-card);
+		color: var(--text);
+		border-color: var(--text-dim);
 	}
 
-	.legend-dot.start {
-		background: var(--text);
-		box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--text);
+	/* ===== Mobile: Algorithm Overlay ===== */
+	@media (max-width: 768px) {
+		.overlay {
+			position: absolute;
+			inset: 0;
+			z-index: 300;
+			background: rgba(0, 0, 0, 0.6);
+			display: flex;
+			align-items: flex-end;
+			justify-content: center;
+			padding: 1rem;
+		}
+
+		.overlay-card {
+			background: var(--bg-panel);
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			padding: 1.25rem;
+			width: 100%;
+			max-height: 70vh;
+			overflow-y: auto;
+		}
+
+		.overlay-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			margin-bottom: 0.5rem;
+		}
+
+		.overlay-close {
+			background: none;
+			border: none;
+			color: var(--text-dim);
+			font-size: 1.5rem;
+			cursor: pointer;
+			padding: 0;
+			line-height: 1;
+		}
+
+		.overlay-close:hover {
+			color: var(--text);
+		}
+
+		/* Adjust route list for mobile */
+		.sheet-content .route-list li {
+			padding: 0.5rem 0;
+		}
+
+		.sheet-content .stop-name {
+			font-size: 0.82rem;
+		}
+
+		.sheet-content .start-select {
+			font-size: 0.85rem;
+			padding: 0.6rem 0.75rem;
+		}
 	}
 
-	.legend-dot.bright {
-		background: var(--text);
-	}
-
-	.legend-dot.mid {
-		background: var(--text-muted);
-	}
-
-	.legend-dot.dim {
-		background: var(--text-dim);
+	/* Desktop: hide overlay backdrop styling */
+	@media (min-width: 769px) {
+		.overlay {
+			display: none;
+		}
 	}
 </style>
