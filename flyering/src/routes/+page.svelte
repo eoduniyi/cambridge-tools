@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
 	import {
 		LOCATIONS,
 		CAMBRIDGE_BOUNDS,
@@ -24,9 +25,13 @@
 	let selectedAlgorithm = $state<'nearest' | '2opt' | 'brute'>('nearest');
 	let startIdx = $state(0);
 	let showAlgorithm = $state(false);
+	let algoPopped = $state(false);
 	let showLegal = $state(false);
 	let animating = $state(false);
 	let currentTheme = $state<ThemeName>('dark');
+
+	// Evidence viewer
+	let evidenceLocation = $state<FlyerLocation | null>(null);
 
 	// Mobile state
 	let sheetState = $state<'collapsed' | 'peek' | 'full'>('peek');
@@ -136,12 +141,23 @@
 		let i = 0;
 		const drawn: [number, number][] = [coords[0]];
 		routeLayer = L.polyline(drawn, { color: t.text, weight: 1.5, opacity: 0.7 }).addTo(map);
-		const interval = setInterval(() => {
+
+		let lastTime = 0;
+		const stepDelay = 200; // ms between steps
+
+		function step(timestamp: number) {
+			if (timestamp - lastTime < stepDelay) {
+				requestAnimationFrame(step);
+				return;
+			}
+			lastTime = timestamp;
 			i++;
-			if (i >= coords.length) { clearInterval(interval); animating = false; return; }
+			if (i >= coords.length) { animating = false; return; }
 			drawn.push(coords[i]);
-			routeLayer!.setLatLngs(drawn);
-		}, 250);
+			routeLayer!.setLatLngs([...drawn]);
+			requestAnimationFrame(step);
+		}
+		requestAnimationFrame(step);
 	}
 
 	function updateMarkerStyles() {
@@ -230,8 +246,21 @@
 				radius: isStart ? 8 : 5, fillColor, color: isStart ? t.text : 'transparent',
 				weight: isStart ? 2 : 0, opacity: 1, fillOpacity: isStart ? 1 : 0.7
 			}).addTo(map!);
-			const badge = loc.confirmed ? '<span style="display:inline-block;background:#2a5a3a;color:#fff;font-size:0.6rem;padding:0.1rem 0.35rem;border-radius:2px;margin-top:0.25rem;">confirmed</span>' : '';
-			marker.bindPopup(`<div style="color:#1a1a1a;font-family:inherit;min-width:160px;line-height:1.5;"><strong style="font-size:0.85rem;">${loc.name}</strong><br/><span style="color:#555;font-size:0.75rem;">${loc.neighborhood}</span><br/><span style="font-size:0.7rem;color:#333;">${loc.notes}</span>${badge}</div>`);
+
+			// Build popup with photo if evidence exists
+			let popupContent = `<div style="color:#1a1a1a;font-family:inherit;min-width:200px;line-height:1.5;">`;
+			popupContent += `<strong style="font-size:0.85rem;">${loc.name}</strong><br/>`;
+			popupContent += `<span style="color:#555;font-size:0.75rem;">${loc.neighborhood}</span><br/>`;
+			if (loc.evidence) {
+				popupContent += `<img src="${base}/evidence/${loc.evidence}" alt="Flyer at ${loc.name}" style="width:100%;border-radius:4px;margin:0.5rem 0;max-height:200px;object-fit:cover;" />`;
+			}
+			popupContent += `<span style="font-size:0.7rem;color:#333;">${loc.notes}</span>`;
+			if (loc.confirmed) {
+				popupContent += `<br/><span style="display:inline-block;background:#2a5a3a;color:#fff;font-size:0.6rem;padding:0.1rem 0.35rem;border-radius:2px;margin-top:0.4rem;">${loc.confirmedDate || 'confirmed'}</span>`;
+			}
+			popupContent += `</div>`;
+
+			marker.bindPopup(popupContent, { maxWidth: 240 });
 			markers.push(marker);
 		});
 		solve();
@@ -278,27 +307,31 @@
 				</div>
 				<div class="actions">
 					<button class="action-btn" onclick={() => { animating = true; solve(); }}>Animate</button>
-					<button class="action-btn secondary" onclick={() => (showAlgorithm = !showAlgorithm)}>{showAlgorithm ? 'Hide' : 'Show'} algorithm</button>
 				</div>
 			</section>
 
-			{#if showAlgorithm}
+			{#if !algoPopped}
 				<section class="section algorithm-detail">
 					<div class="algo-header-row">
 						<div>
-							<h2>{ALGORITHM_INFO[selectedAlgorithm].name}</h2>
-							<span class="complexity">{ALGORITHM_INFO[selectedAlgorithm].complexity}</span>
+							<h3 class="algo-inline-title">{ALGORITHM_INFO[selectedAlgorithm].name}</h3>
+							<span class="algo-inline-complexity">{ALGORITHM_INFO[selectedAlgorithm].complexity}</span>
 						</div>
-						<button class="float-btn" onclick={() => (codeFloating = !codeFloating)} title={codeFloating ? 'Dock' : 'Float'}>{codeFloating ? '▣' : '↗'}</button>
+						<button class="float-btn" onclick={() => (algoPopped = true)} title="Pop out over map">↗</button>
 					</div>
 					<p class="algo-description">{ALGORITHM_INFO[selectedAlgorithm].description}</p>
-					{#if !codeFloating}
-						<div class="pseudocode">
-							{#each ALGORITHM_INFO[selectedAlgorithm].pseudocode as line, i}
-								<div class="code-line"><span class="line-num">{i + 1}</span><span class="line-content">{@html highlightLine(line)}</span></div>
-							{/each}
-						</div>
-					{/if}
+					<div class="pseudocode">
+						{#each ALGORITHM_INFO[selectedAlgorithm].pseudocode as line, i}
+							<div class="code-line"><span class="line-num">{i + 1}</span><span class="line-content">{@html highlightLine(line)}</span></div>
+						{/each}
+					</div>
+				</section>
+			{/if}
+
+			{#if algoPopped}
+				<section class="section algo-popped-hint">
+					<span class="algo-hint-text">Algorithm is over the map</span>
+					<button class="action-btn" onclick={() => (algoPopped = false)}>Dock here</button>
 				</section>
 			{/if}
 
@@ -313,7 +346,13 @@
 					</div>
 					<ol class="route-list">
 						{#each solverResult.route as idx, i}
-							<li><span class="stop-num">{i + 1}</span><span class="stop-name">{LOCATIONS[idx].name}{#if LOCATIONS[idx].confirmed}<span class="confirmed-badge">✓</span>{/if}</span></li>
+							<li>
+								<span class="stop-num">{i + 1}</span>
+								<span class="stop-name">{LOCATIONS[idx].name}</span>
+								{#if LOCATIONS[idx].confirmed}
+									<button class="evidence-btn" onclick={() => (evidenceLocation = LOCATIONS[idx])} title="View evidence">✓</button>
+								{/if}
+							</li>
 						{/each}
 					</ol>
 					<div class="route-return">Return to {LOCATIONS[startIdx].name}</div>
@@ -415,7 +454,10 @@
 						{#each solverResult.route as idx, i}
 							<li>
 								<span class="stop-num">{i + 1}</span>
-								<span class="stop-name">{LOCATIONS[idx].name}{#if LOCATIONS[idx].confirmed}<span class="confirmed-badge">✓</span>{/if}</span>
+								<span class="stop-name">{LOCATIONS[idx].name}</span>
+								{#if LOCATIONS[idx].confirmed}
+									<button class="evidence-btn" onclick={() => (evidenceLocation = LOCATIONS[idx])} title="View evidence">✓</button>
+								{/if}
 							</li>
 						{/each}
 					</ol>
@@ -423,17 +465,63 @@
 			</div>
 		</div>
 
-		<!-- Mobile algorithm overlay -->
-		{#if showAlgorithm}
-			<div class="overlay mobile-only" role="dialog" aria-label="Algorithm details">
-				<div class="overlay-card">
-					<div class="overlay-header">
-						<h3>{ALGORITHM_INFO[selectedAlgorithm].name}</h3>
-						<button class="overlay-close" onclick={() => (showAlgorithm = false)}>&times;</button>
+		<!-- Algorithm panel (popped out over map, desktop only) -->
+		{#if algoPopped}
+			<div class="algo-panel desktop-only" role="dialog" aria-label="Algorithm details">
+				<div class="algo-panel-header">
+					<div class="algo-panel-tabs">
+						{#each [{ value: 'nearest', label: 'Nearest Neighbor' }, { value: '2opt', label: '2-Opt' }, { value: 'brute', label: 'Brute Force' }] as algo}
+							<button
+								class="algo-panel-tab"
+								class:active={selectedAlgorithm === algo.value}
+								onclick={() => { selectedAlgorithm = algo.value as typeof selectedAlgorithm; solve(); }}
+							>{algo.label}</button>
+						{/each}
 					</div>
-					<span class="complexity">{ALGORITHM_INFO[selectedAlgorithm].complexity}</span>
-					<p class="algo-description">{ALGORITHM_INFO[selectedAlgorithm].description}</p>
-					<div class="pseudocode">
+					<div class="algo-panel-header-actions">
+						<button class="algo-panel-minimize" onclick={() => (algoPopped = false)} title="Dock in sidebar">↙</button>
+						<button class="algo-panel-close" onclick={() => (algoPopped = false)}>×</button>
+					</div>
+				</div>
+				<div class="algo-panel-body">
+					<div class="algo-panel-meta">
+						<h3>{ALGORITHM_INFO[selectedAlgorithm].name}</h3>
+						<span class="algo-panel-complexity">{ALGORITHM_INFO[selectedAlgorithm].complexity}</span>
+					</div>
+					<p class="algo-panel-desc">{ALGORITHM_INFO[selectedAlgorithm].description}</p>
+					<div class="algo-panel-code">
+						{#each ALGORITHM_INFO[selectedAlgorithm].pseudocode as line, i}
+							<div class="code-line"><span class="line-num">{i + 1}</span><span class="line-content">{@html highlightLine(line)}</span></div>
+						{/each}
+					</div>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Mobile algorithm overlay (triggered by FAB) -->
+		{#if showAlgorithm}
+			<div class="algo-panel mobile-only" role="dialog" aria-label="Algorithm details">
+				<div class="algo-panel-header">
+					<div class="algo-panel-tabs">
+						{#each [{ value: 'nearest', label: 'NN' }, { value: '2opt', label: '2-Opt' }, { value: 'brute', label: 'BF' }] as algo}
+							<button
+								class="algo-panel-tab"
+								class:active={selectedAlgorithm === algo.value}
+								onclick={() => { selectedAlgorithm = algo.value as typeof selectedAlgorithm; solve(); }}
+							>{algo.label}</button>
+						{/each}
+					</div>
+					<div class="algo-panel-header-actions">
+						<button class="algo-panel-close" onclick={() => (showAlgorithm = false)}>×</button>
+					</div>
+				</div>
+				<div class="algo-panel-body">
+					<div class="algo-panel-meta">
+						<h3>{ALGORITHM_INFO[selectedAlgorithm].name}</h3>
+						<span class="algo-panel-complexity">{ALGORITHM_INFO[selectedAlgorithm].complexity}</span>
+					</div>
+					<p class="algo-panel-desc">{ALGORITHM_INFO[selectedAlgorithm].description}</p>
+					<div class="algo-panel-code">
 						{#each ALGORITHM_INFO[selectedAlgorithm].pseudocode as line, i}
 							<div class="code-line"><span class="line-num">{i + 1}</span><span class="line-content">{@html highlightLine(line)}</span></div>
 						{/each}
@@ -443,17 +531,31 @@
 		{/if}
 	</div>
 
-	<!-- Desktop floating panel -->
-	{#if codeFloating && showAlgorithm}
-		<div class="floating-code desktop-only" style="left:{floatX}px;top:{floatY}px;" role="dialog" aria-label="Pseudocode">
-			<div class="floating-header" role="toolbar" aria-label="Drag to reposition" onmousedown={onDragStart}>
-				<span class="floating-title">{ALGORITHM_INFO[selectedAlgorithm].name}</span>
-				<button class="floating-close" onclick={() => (codeFloating = false)}>&times;</button>
-			</div>
-			<div class="floating-body">
-				{#each ALGORITHM_INFO[selectedAlgorithm].pseudocode as line, i}
-					<div class="code-line"><span class="line-num">{i + 1}</span><span class="line-content">{@html highlightLine(line)}</span></div>
-				{/each}
+	<!-- Evidence viewer -->
+	{#if evidenceLocation}
+		<div class="evidence-overlay" onclick={() => (evidenceLocation = null)} role="dialog" aria-label="Placement evidence">
+			<div class="evidence-card" onclick={(e) => e.stopPropagation()}>
+				<div class="evidence-header">
+					<div>
+						<h3 class="evidence-title">{evidenceLocation.name}</h3>
+						<span class="evidence-meta">{evidenceLocation.neighborhood} · {evidenceLocation.confirmedDate || 'confirmed'}</span>
+					</div>
+					<button class="evidence-close" onclick={() => (evidenceLocation = null)}>×</button>
+				</div>
+				{#if evidenceLocation.evidence}
+					<div class="evidence-image-wrap">
+						<img
+							src="{base}/evidence/{evidenceLocation.evidence}"
+							alt="Flyer placement at {evidenceLocation.name}"
+							class="evidence-image"
+						/>
+					</div>
+				{:else}
+					<div class="evidence-placeholder">
+						<span>No photo yet</span>
+					</div>
+				{/if}
+				<p class="evidence-notes">{evidenceLocation.notes}</p>
 			</div>
 		</div>
 	{/if}
@@ -555,20 +657,181 @@
 	.action-btn.secondary { border-color: transparent; color: var(--text-dim); }
 	.action-btn.secondary:hover { color: var(--text-muted); }
 
-	/* Algorithm detail */
-	.algorithm-detail { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 1.5rem; overflow: hidden; }
-	.algo-header-row { display: flex; align-items: flex-start; justify-content: space-between; }
-	.algorithm-detail h2 { color: var(--text); font-size: 0.85rem; text-transform: none; letter-spacing: -0.01em; font-weight: 500; margin-bottom: 0.2rem; font-family: 'Georgia', serif; }
-	.complexity { font-size: 0.7rem; color: var(--text-dim); font-family: 'SF Mono', 'Fira Code', monospace; }
-	.float-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); width: 1.6rem; height: 1.6rem; border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; transition: all 0.15s; flex-shrink: 0; }
-	.float-btn:hover { color: var(--text); border-color: var(--text-muted); }
-	.algo-description { margin: 0.75rem 0 1rem; font-size: 0.8rem; line-height: 1.65; color: var(--text-muted); text-align: justify; hyphens: auto; font-family: 'Georgia', serif; }
+	/* Algorithm detail — now an overlay panel on the map */
+	.algo-panel {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		bottom: 1rem;
+		width: 380px;
+		max-width: calc(100% - 2rem);
+		z-index: 500;
+		background: var(--bg-panel);
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+
+	@media (max-width: 768px) {
+		.algo-panel {
+			top: 0.75rem;
+			right: 0.75rem;
+			bottom: 0.75rem;
+			left: 0.75rem;
+			width: auto;
+			max-width: none;
+		}
+	}
+
+	.algo-panel-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.75rem 1rem;
+		border-bottom: 1px solid var(--border);
+		gap: 0.5rem;
+	}
+
+	.algo-panel-tabs {
+		display: flex;
+		gap: 0;
+		border: 1px solid var(--border);
+		border-radius: 4px;
+		overflow: hidden;
+		flex: 1;
+	}
+
+	.algo-panel-tab {
+		flex: 1;
+		background: transparent;
+		border: none;
+		border-right: 1px solid var(--border);
+		color: var(--text-dim);
+		padding: 0.45rem 0.5rem;
+		font-size: 0.7rem;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.algo-panel-tab:last-child { border-right: none; }
+	.algo-panel-tab:hover { color: var(--text-muted); }
+	.algo-panel-tab.active { background: var(--bg-card); color: var(--text); }
+
+	.algo-panel-close {
+		background: none;
+		border: none;
+		color: var(--text-dim);
+		font-size: 1.4rem;
+		cursor: pointer;
+		padding: 0 0.25rem;
+		line-height: 1;
+		flex-shrink: 0;
+	}
+
+	.algo-panel-close:hover { color: var(--text); }
+
+	.algo-panel-header-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	.algo-panel-minimize {
+		background: none;
+		border: 1px solid var(--border);
+		color: var(--text-dim);
+		width: 1.5rem;
+		height: 1.5rem;
+		border-radius: 3px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 0.75rem;
+		transition: all 0.15s;
+	}
+
+	.algo-panel-minimize:hover { color: var(--text); border-color: var(--text-muted); }
+
+	/* Sidebar inline algorithm detail */
+	.algorithm-detail {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 1.5rem;
+		gap: 0;
+	}
+
+	.algo-header-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1rem; }
+	.algo-inline-title { margin: 0; font-size: 1rem; font-weight: 500; color: var(--text); font-family: 'Georgia', serif; }
+	.algo-inline-complexity { font-size: 0.75rem; color: var(--text-dim); font-family: 'SF Mono', 'Fira Code', monospace; display: block; margin-top: 0.2rem; }
+	.float-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); width: 1.8rem; height: 1.8rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; transition: all 0.15s; flex-shrink: 0; }
+	.float-btn:hover { color: var(--text); border-color: var(--text-muted); background: var(--bg); }
+	.algo-description { margin: 0 0 1.25rem; font-size: 0.82rem; line-height: 1.7; color: var(--text-muted); text-align: justify; hyphens: auto; font-family: 'Georgia', serif; }
+
+	.algo-popped-hint {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.6rem 0;
+		gap: 0.5rem;
+	}
+
+	.algo-hint-text {
+		font-size: 0.72rem;
+		color: var(--text-dim);
+		font-style: italic;
+	}
+
+	.algo-panel-body {
+		flex: 1;
+		overflow-y: auto;
+		padding: 1.5rem;
+	}
+
+	.algo-panel-meta {
+		margin-bottom: 1rem;
+	}
+
+	.algo-panel-meta h3 {
+		font-family: 'Georgia', serif;
+		font-size: 1rem;
+		font-weight: 500;
+		margin-bottom: 0.25rem;
+	}
+
+	.algo-panel-complexity {
+		font-size: 0.75rem;
+		color: var(--text-dim);
+		font-family: 'SF Mono', 'Fira Code', monospace;
+	}
+
+	.algo-panel-desc {
+		margin: 0 0 1.5rem;
+		font-size: 0.85rem;
+		line-height: 1.7;
+		color: var(--text-muted);
+		text-align: justify;
+		hyphens: auto;
+		font-family: 'Georgia', serif;
+	}
+
+	.algo-panel-code {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 1.25rem;
+		overflow-x: auto;
+	}
 
 	/* Pseudocode */
-	.pseudocode { padding: 1rem 0; border-top: 1px solid var(--border); overflow-x: auto; max-width: 100%; }
-	.code-line { display: flex; align-items: baseline; gap: 0.75rem; line-height: 1.9; }
-	.line-num { width: 1.2rem; min-width: 1.2rem; text-align: right; font-size: 0.6rem; color: var(--code-line-num); font-family: 'SF Mono', 'Fira Code', monospace; flex-shrink: 0; user-select: none; }
-	.line-content { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.72rem; color: var(--code-text); white-space: pre; }
+	.pseudocode { padding: 1.25rem; border-top: none; overflow-x: auto; max-width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+	.code-line { display: flex; align-items: baseline; gap: 0.75rem; line-height: 2; }
+	.line-num { width: 1.2rem; min-width: 1.2rem; text-align: right; font-size: 0.62rem; color: var(--code-line-num); font-family: 'SF Mono', 'Fira Code', monospace; flex-shrink: 0; user-select: none; }
+	.line-content { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.74rem; color: var(--code-text); white-space: pre; }
 	:global(.code-line .kw) { color: var(--code-kw); font-weight: 500; }
 	:global(.code-line .op) { color: var(--code-op); }
 	:global(.code-line .sym) { color: var(--code-sym); font-style: italic; }
@@ -584,9 +847,102 @@
 	.stop-num { width: 1.4rem; height: 1.4rem; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--text-dim); border: 1px solid var(--border); border-radius: 50%; flex-shrink: 0; }
 	.stop-name { color: var(--text-muted); font-size: 0.78rem; display: flex; align-items: center; gap: 0.4rem; }
 	.confirmed-badge { font-size: 0.65rem; color: var(--accent); opacity: 0.7; }
+	.evidence-btn { background: none; border: 1px solid var(--accent); color: var(--accent); font-size: 0.6rem; width: 1.2rem; height: 1.2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-left: auto; flex-shrink: 0; opacity: 0.7; transition: all 0.15s; }
+	.evidence-btn:hover { opacity: 1; background: var(--accent); color: var(--bg); }
 	.route-return { margin-top: 0.5rem; font-size: 0.7rem; color: var(--text-dim); font-style: italic; opacity: 0.6; }
 
-	/* Legal */
+	/* Evidence viewer */
+	.evidence-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 10000;
+		background: rgba(0, 0, 0, 0.75);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1.5rem;
+		backdrop-filter: blur(4px);
+	}
+
+	.evidence-card {
+		background: var(--bg-panel);
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		max-width: 480px;
+		width: 100%;
+		max-height: 85vh;
+		overflow-y: auto;
+		box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+	}
+
+	.evidence-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		padding: 1.25rem 1.25rem 0.75rem;
+	}
+
+	.evidence-title {
+		margin: 0;
+		font-size: 0.95rem;
+		font-weight: 500;
+		color: var(--text);
+		font-family: 'Georgia', serif;
+	}
+
+	.evidence-meta {
+		font-size: 0.7rem;
+		color: var(--text-dim);
+		margin-top: 0.2rem;
+		display: block;
+	}
+
+	.evidence-close {
+		background: none;
+		border: none;
+		color: var(--text-dim);
+		font-size: 1.5rem;
+		cursor: pointer;
+		padding: 0;
+		line-height: 1;
+		flex-shrink: 0;
+	}
+
+	.evidence-close:hover {
+		color: var(--text);
+	}
+
+	.evidence-image-wrap {
+		padding: 0 1.25rem;
+	}
+
+	.evidence-image {
+		width: 100%;
+		border-radius: 6px;
+		display: block;
+	}
+
+	.evidence-placeholder {
+		margin: 0 1.25rem;
+		padding: 3rem;
+		background: var(--bg-card);
+		border: 1px dashed var(--border);
+		border-radius: 6px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--text-dim);
+		font-size: 0.8rem;
+	}
+
+	.evidence-notes {
+		padding: 1rem 1.25rem 1.25rem;
+		margin: 0;
+		font-size: 0.78rem;
+		line-height: 1.5;
+		color: var(--text-muted);
+		font-family: 'Georgia', serif;
+	}
 	.section-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; background: none; border: none; padding: 0; cursor: pointer; color: inherit; }
 	.section-toggle h2 { margin: 0; }
 	.toggle-indicator { color: var(--text-dim); font-size: 1rem; }
@@ -609,15 +965,6 @@
 	.legend-dot.bright { background: var(--text); }
 	.legend-dot.mid { background: var(--text-muted); }
 	.legend-dot.dim { background: var(--text-dim); }
-
-	/* Desktop floating panel */
-	.floating-code { position: fixed; z-index: 9999; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); min-width: 280px; max-width: 420px; }
-	.floating-header { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); cursor: grab; user-select: none; }
-	.floating-header:active { cursor: grabbing; }
-	.floating-title { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
-	.floating-close { background: none; border: none; color: var(--text-dim); font-size: 1.1rem; cursor: pointer; padding: 0; line-height: 1; }
-	.floating-close:hover { color: var(--text); }
-	.floating-body { padding: 1rem 1.25rem; overflow-x: auto; }
 
 	/* ===== Mobile: FABs ===== */
 	.fab-group {
@@ -738,48 +1085,6 @@
 
 	/* ===== Mobile: Algorithm Overlay ===== */
 	@media (max-width: 768px) {
-		.overlay {
-			position: absolute;
-			inset: 0;
-			z-index: 300;
-			background: rgba(0, 0, 0, 0.6);
-			display: flex;
-			align-items: flex-end;
-			justify-content: center;
-			padding: 1rem;
-		}
-
-		.overlay-card {
-			background: var(--bg-panel);
-			border: 1px solid var(--border);
-			border-radius: 12px;
-			padding: 1.25rem;
-			width: 100%;
-			max-height: 70vh;
-			overflow-y: auto;
-		}
-
-		.overlay-header {
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			margin-bottom: 0.5rem;
-		}
-
-		.overlay-close {
-			background: none;
-			border: none;
-			color: var(--text-dim);
-			font-size: 1.5rem;
-			cursor: pointer;
-			padding: 0;
-			line-height: 1;
-		}
-
-		.overlay-close:hover {
-			color: var(--text);
-		}
-
 		/* Adjust route list for mobile */
 		.sheet-content .route-list li {
 			padding: 0.5rem 0;
@@ -792,13 +1097,6 @@
 		.sheet-content .start-select {
 			font-size: 0.85rem;
 			padding: 0.6rem 0.75rem;
-		}
-	}
-
-	/* Desktop: hide overlay backdrop styling */
-	@media (min-width: 769px) {
-		.overlay {
-			display: none;
 		}
 	}
 </style>

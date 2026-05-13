@@ -1,13 +1,9 @@
 /**
  * TSP Solvers for the Traveling Flyerperson problem.
  *
- * We implement multiple approaches so the interactive page can compare them:
- * 1. Brute force (exact, only feasible for small n)
+ * 1. Brute force (exact, cached per startIdx)
  * 2. Nearest neighbor heuristic (greedy, O(n²))
  * 3. 2-opt local search (improvement heuristic)
- *
- * All solvers return a route as an ordered array of location indices,
- * starting from the anchor (index 0).
  */
 
 import { routeDistance } from "./graph";
@@ -19,77 +15,117 @@ export interface SolverResult {
   iterations?: number;
 }
 
+// Cache brute force results by startIdx to avoid recomputing 40M permutations
+const bfCache = new Map<number, SolverResult>();
+
 /**
- * Brute force: try all permutations. O(n!) — only use for n <= 12ish.
- * Fixes startIdx as start, permutes the rest.
+ * Brute force: try all permutations. O(n!).
+ * Results are cached per startIdx since the optimal cycle is the same
+ * regardless of start (just rotated), but we cache the specific representation.
  */
 export function bruteForce(
   matrix: number[][],
   startIdx: number = 0,
 ): SolverResult {
-  const n = matrix.length;
-  const rest = Array.from({ length: n }, (_, i) => i).filter(
-    (i) => i !== startIdx,
-  );
+  if (bfCache.has(startIdx)) return bfCache.get(startIdx)!;
 
-  let bestRoute = [startIdx, ...rest];
-  let bestDist = routeDistance(bestRoute, matrix);
+  const n = matrix.length;
+  const rest: number[] = [];
+  for (let i = 0; i < n; i++) {
+    if (i !== startIdx) rest.push(i);
+  }
+
+  let bestDist = Infinity;
+  let bestRoute: number[] = [];
   let iterations = 0;
 
-  function permute(arr: number[], l: number): void {
-    if (l === arr.length - 1) {
+  // Iterative Heap's algorithm to avoid deep recursion overhead
+  const c = new Array(rest.length).fill(0);
+  let perm = [...rest];
+
+  // Evaluate initial permutation
+  iterations++;
+  let d = routeDistanceFast(startIdx, perm, matrix);
+  bestDist = d;
+  bestRoute = [startIdx, ...perm];
+
+  let i = 0;
+  while (i < perm.length) {
+    if (c[i] < i) {
+      if (i % 2 === 0) {
+        [perm[0], perm[i]] = [perm[i], perm[0]];
+      } else {
+        [perm[c[i]], perm[i]] = [perm[i], perm[c[i]]];
+      }
       iterations++;
-      const candidate = [startIdx, ...arr];
-      const d = routeDistance(candidate, matrix);
+      d = routeDistanceFast(startIdx, perm, matrix);
       if (d < bestDist) {
         bestDist = d;
-        bestRoute = [...candidate];
+        bestRoute = [startIdx, ...perm];
       }
-      return;
-    }
-    for (let i = l; i < arr.length; i++) {
-      [arr[l], arr[i]] = [arr[i], arr[l]];
-      permute(arr, l + 1);
-      [arr[l], arr[i]] = [arr[i], arr[l]];
+      c[i]++;
+      i = 0;
+    } else {
+      c[i] = 0;
+      i++;
     }
   }
 
-  permute(rest, 0);
-
-  return {
+  const result: SolverResult = {
     route: bestRoute,
     distance: bestDist,
     algorithm: "Brute Force (Exact)",
     iterations,
   };
+
+  bfCache.set(startIdx, result);
+  return result;
+}
+
+/**
+ * Fast route distance: avoids array allocation.
+ * Computes distance for [startIdx, ...perm] as a cycle.
+ */
+function routeDistanceFast(
+  startIdx: number,
+  perm: number[],
+  matrix: number[][],
+): number {
+  let total = matrix[startIdx][perm[0]];
+  for (let i = 0; i < perm.length - 1; i++) {
+    total += matrix[perm[i]][perm[i + 1]];
+  }
+  total += matrix[perm[perm.length - 1]][startIdx];
+  return total;
 }
 
 /**
  * Nearest Neighbor heuristic: always go to the closest unvisited node.
- * O(n²), fast but often suboptimal.
+ * O(n²), fast.
  */
 export function nearestNeighbor(
   matrix: number[][],
   startIdx: number = 0,
 ): SolverResult {
   const n = matrix.length;
-  const visited = new Set<number>([startIdx]);
+  const visited = new Uint8Array(n);
+  visited[startIdx] = 1;
   const route = [startIdx];
 
   let current = startIdx;
-  while (visited.size < n) {
+  for (let step = 1; step < n; step++) {
     let nearest = -1;
     let nearestDist = Infinity;
 
     for (let j = 0; j < n; j++) {
-      if (!visited.has(j) && matrix[current][j] < nearestDist) {
+      if (!visited[j] && matrix[current][j] < nearestDist) {
         nearest = j;
         nearestDist = matrix[current][j];
       }
     }
 
     route.push(nearest);
-    visited.add(nearest);
+    visited[nearest] = 1;
     current = nearest;
   }
 
@@ -103,13 +139,14 @@ export function nearestNeighbor(
 
 /**
  * 2-opt improvement: iteratively reverse segments to reduce total distance.
- * Starts from a given route (e.g., nearest neighbor output).
+ * Optimized: caches current distance, uses delta evaluation.
  */
 export function twoOpt(
   matrix: number[][],
   initialRoute: number[],
 ): SolverResult {
   let route = [...initialRoute];
+  let currentDist = routeDistance(route, matrix);
   let improved = true;
   let iterations = 0;
 
@@ -118,11 +155,26 @@ export function twoOpt(
     for (let i = 1; i < route.length - 1; i++) {
       for (let j = i + 1; j < route.length; j++) {
         iterations++;
-        const newRoute = twoOptSwap(route, i, j);
-        const newDist = routeDistance(newRoute, matrix);
-        const oldDist = routeDistance(route, matrix);
-        if (newDist < oldDist) {
-          route = newRoute;
+
+        // Delta evaluation: only check the edges that change
+        const a = route[i - 1];
+        const b = route[i];
+        const c = route[j];
+        const d = j + 1 < route.length ? route[j + 1] : route[0]; // wrap for cycle
+
+        const oldEdges = matrix[a][b] + matrix[c][d];
+        const newEdges = matrix[a][c] + matrix[b][d];
+
+        if (newEdges < oldEdges) {
+          // Reverse segment [i..j]
+          let left = i;
+          let right = j;
+          while (left < right) {
+            [route[left], route[right]] = [route[right], route[left]];
+            left++;
+            right--;
+          }
+          currentDist -= oldEdges - newEdges;
           improved = true;
         }
       }
@@ -131,21 +183,8 @@ export function twoOpt(
 
   return {
     route,
-    distance: routeDistance(route, matrix),
+    distance: currentDist,
     algorithm: "2-Opt Local Search",
     iterations,
   };
-}
-
-function twoOptSwap(route: number[], i: number, j: number): number[] {
-  const newRoute = route.slice(0, i);
-  // Reverse the segment between i and j
-  for (let k = j; k >= i; k--) {
-    newRoute.push(route[k]);
-  }
-  // Add the rest
-  for (let k = j + 1; k < route.length; k++) {
-    newRoute.push(route[k]);
-  }
-  return newRoute;
 }

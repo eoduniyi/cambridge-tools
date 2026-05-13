@@ -18,6 +18,8 @@ export interface FlyerLocation {
     | "park";
   legal: "permitted" | "ask-permission" | "restricted";
   confirmed: boolean; // has a flyer been physically verified here?
+  evidence?: string; // photo filename in static/evidence/
+  confirmedDate?: string; // ISO date string
   notes: string;
 }
 
@@ -57,11 +59,13 @@ export const LOCATIONS: FlyerLocation[] = [
   {
     id: "binney-street-park",
     name: "Binney Street Park",
-    coords: [42.366, -71.083],
+    coords: [42.3673, -71.0883],
     neighborhood: "Kendall Square",
     type: "park",
     legal: "permitted",
     confirmed: true,
+    evidence: "binney-street-park.jpg",
+    confirmedDate: "2025-05-13",
     notes: "Galileo Galilei Way at Fulkerson St. Poster confirmed on site.",
   },
   {
