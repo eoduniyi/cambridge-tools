@@ -1,0 +1,18 @@
+{
+  "fetchedAt": "2026-05-13T22:39:08.457Z",
+  "bbox": "42.3530,-71.1600,42.4040,-71.0640",
+  "counts": {
+    "trafficSignals": 1007,
+    "bulletinBoardCandidates": 2001,
+    "transit": 51,
+    "byAmenity": {
+      "cafe": 126,
+      "library": 59,
+      "community_centre": 12,
+      "pub": 27,
+      "bar": 35,
+      "books": 16,
+      "bicycle_parking": 1726
+    }
+  }
+}

@@ -18,3 +18,10 @@ export {
   type ThemeName,
   type ThemeTokens,
 } from "./stores/theme";
+export {
+  TRAFFIC_SIGNALS,
+  BOARD_CANDIDATES,
+  TRANSIT_POINTS,
+  OVERPASS_SUMMARY,
+  type OverpassPOI,
+} from "./data/overpass-data";

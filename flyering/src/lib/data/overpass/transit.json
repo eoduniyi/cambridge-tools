@@ -1,0 +1,730 @@
+[
+  {
+    "id": 31419650,
+    "lat": 42.3625999,
+    "lng": -71.086666,
+    "tags": {
+      "level": "0",
+      "operator": "Massachusetts Bay Transportation Authority",
+      "operator:short": "MBTA",
+      "operator:wikidata": "Q171985",
+      "railway": "subway_entrance",
+      "url": "http://www.mbta.com/schedules_and_maps/subway/lines/stations/?stopId=12412",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 69504598,
+    "lat": 42.3733824,
+    "lng": -71.1189856,
+    "name": "Harvard Square",
+    "tags": {
+      "amenity": "bus_station",
+      "bus": "yes",
+      "check_date": "2025-08-01",
+      "name": "Harvard Square",
+      "public_transport": "station",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 82748066,
+    "lat": 42.3652368,
+    "lng": -71.1036193,
+    "tags": {
+      "description": "Red Line Inbound only",
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 325353499,
+    "lat": 42.3960807,
+    "lng": -71.1395917,
+    "tags": {
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 356122226,
+    "lat": 42.3958073,
+    "lng": -71.1416285,
+    "name": "Alewife",
+    "tags": {
+      "air_conditioning": "no",
+      "amenity": "bus_station",
+      "bus": "yes",
+      "check_date": "2025-06-18",
+      "name": "Alewife",
+      "operator": "Boston MBTA",
+      "public_transport": "station",
+      "source": "survey",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 365435080,
+    "lat": 42.3655638,
+    "lng": -71.1037661,
+    "tags": {
+      "description": "Red Line Outbound only",
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 367946041,
+    "lat": 42.3656657,
+    "lng": -71.1043472,
+    "tags": {
+      "description": "Red Line Inbound only",
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 367946534,
+    "lat": 42.3658065,
+    "lng": -71.1041836,
+    "tags": {
+      "description": "Red Line Outbound only",
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 369607814,
+    "lat": 42.3967991,
+    "lng": -71.1219683,
+    "tags": {
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 417123488,
+    "lat": 42.364823,
+    "lng": -71.1029686,
+    "tags": {
+      "description": "Pearl St. Red Line Inbound only.",
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 417123493,
+    "lat": 42.3649875,
+    "lng": -71.1028011,
+    "tags": {
+      "description": "Red Line Outbound only",
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 1077780644,
+    "lat": 42.3882497,
+    "lng": -71.1191161,
+    "tags": {
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 1678319172,
+    "lat": 42.3622358,
+    "lng": -71.0848601,
+    "tags": {
+      "operator": "Massachusetts Bay Transportation Authority",
+      "operator:short": "MBTA",
+      "operator:wikidata": "Q171985",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 1678319191,
+    "lat": 42.362448,
+    "lng": -71.0848384,
+    "tags": {
+      "operator": "Massachusetts Bay Transportation Authority",
+      "operator:short": "MBTA",
+      "operator:wikidata": "Q171985",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 1963521394,
+    "lat": 42.3737656,
+    "lng": -71.0696014,
+    "tags": {
+      "railway": "subway_entrance"
+    }
+  },
+  {
+    "id": 4507700295,
+    "lat": 42.3933334,
+    "lng": -71.0776511,
+    "tags": {
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 4507700296,
+    "lat": 42.3921552,
+    "lng": -71.0775789,
+    "tags": {
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 4572514863,
+    "lat": 42.37128,
+    "lng": -71.07615,
+    "name": "Lechmere",
+    "tags": {
+      "addr:city": "Cambridge",
+      "addr:housenumber": "3",
+      "addr:postcode": "02141",
+      "addr:state": "MA",
+      "addr:street": "North First Street",
+      "check_date": "2022-10-23",
+      "layer": "2",
+      "level": "1",
+      "light_rail": "yes",
+      "name": "Lechmere",
+      "network": "MBTA",
+      "network:wikidata": "Q171985",
+      "operator": "Massachusetts Bay Transportation Authority",
+      "operator:short": "MBTA",
+      "operator:wikidata": "Q171985",
+      "public_transport": "station",
+      "railway": "station",
+      "start_date": "2022-03-21",
+      "station": "light_rail",
+      "train": "yes",
+      "website": "https://www.mbta.com/stops/place-lech",
+      "wheelchair": "yes",
+      "wikidata": "Q5972362",
+      "wikipedia": "en:Lechmere station"
+    }
+  },
+  {
+    "id": 5294760733,
+    "lat": 42.3843006,
+    "lng": -71.0766547,
+    "tags": {
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 5325254494,
+    "lat": 42.3624028,
+    "lng": -71.0857205,
+    "name": "Kendall/MIT",
+    "tags": {
+      "addr:city": "Cambridge",
+      "addr:housenumber": "300",
+      "addr:postcode": "02142",
+      "addr:state": "MA",
+      "addr:street": "Main Street",
+      "alt_name": "Kendall/MIT",
+      "internet_access": "no",
+      "name": "Kendall/MIT",
+      "network": "MBTA",
+      "network:guid": "US-MA-MBTA",
+      "network:short": "MBTA",
+      "network:wikidata": "Q171985",
+      "network:wikipedia": "en:Massachusetts Bay Transportation Authority",
+      "operator": "Massachusetts Bay Transportation Authority",
+      "operator:short": "MBTA",
+      "operator:wikidata": "Q171985",
+      "public_transport": "station",
+      "railway": "station",
+      "station": "subway",
+      "subway": "yes",
+      "train": "yes",
+      "wheelchair": "yes",
+      "wikidata": "Q533238"
+    }
+  },
+  {
+    "id": 5331923416,
+    "lat": 42.3961502,
+    "lng": -71.1406803,
+    "name": "Alewife",
+    "tags": {
+      "massgis:geom_id": "4",
+      "name": "Alewife",
+      "network": "MBTA",
+      "network:guid": "US-MA-MBTA",
+      "network:short": "MBTA",
+      "network:wikidata": "Q171985",
+      "network:wikipedia": "en:Massachusetts Bay Transportation Authority",
+      "operator": "Massachusetts Bay Transportation Authority",
+      "operator:short": "MBTA",
+      "operator:wikidata": "Q171985",
+      "public_transport": "station",
+      "railway": "station",
+      "station": "subway",
+      "subway": "yes",
+      "train": "yes",
+      "url": "http://www.mbta.com/schedules_and_maps/subway/lines/stations/?stopId=10029",
+      "wheelchair": "yes",
+      "wikidata": "Q4678452"
+    }
+  },
+  {
+    "id": 5331945814,
+    "lat": 42.3968234,
+    "lng": -71.1226481,
+    "name": "Davis",
+    "tags": {
+      "massgis:geom_id": "115",
+      "name": "Davis",
+      "network": "MBTA",
+      "network:wikidata": "Q171985",
+      "operator": "Massachusetts Bay Transportation Authority",
+      "operator:short": "MBTA",
+      "operator:wikidata": "Q171985",
+      "public_transport": "station",
+      "railway": "station",
+      "station": "subway",
+      "subway": "yes",
+      "toilets": "yes",
+      "toilets:access": "customers",
+      "train": "yes",
+      "url": "http://www.mbta.com/schedules_and_maps/subway/lines/stations/?stopId=11404",
+      "wheelchair": "yes",
+      "wikidata": "Q4845885"
+    }
+  },
+  {
+    "id": 6104533953,
+    "lat": 42.3733252,
+    "lng": -71.1206372,
+    "name": "Elevator to Harvard MBTA station",
+    "tags": {
+      "access": "permissive",
+      "highway": "elevator",
+      "level": "0",
+      "name": "Elevator to Harvard MBTA station",
+      "operator": "Massachusetts Bay Transportation Authority",
+      "operator:short": "MBTA",
+      "operator:wikidata": "Q171985",
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 6104572107,
+    "lat": 42.373322,
+    "lng": -71.1205713,
+    "name": "Brattle Square - Bus Tunnel",
+    "tags": {
+      "level": "0",
+      "name": "Brattle Square - Bus Tunnel",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 6124562823,
+    "lat": 42.374328,
+    "lng": -71.118991,
+    "name": "Church Street - West",
+    "tags": {
+      "name": "Church Street - West",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 6124562829,
+    "lat": 42.3744252,
+    "lng": -71.1186642,
+    "name": "Church Street - Johnston Gate",
+    "tags": {
+      "name": "Church Street - Johnston Gate",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 6129383178,
+    "lat": 42.3532694,
+    "lng": -71.0645712,
+    "tags": {
+      "access": "yes",
+      "automatic_door": "no",
+      "bicycle": "no",
+      "check_date:wheelchair": "2025-08-24",
+      "description": "Outbound entry/exit point",
+      "door": "hinged",
+      "entrance": "yes",
+      "exit": "yes",
+      "foot": "yes",
+      "level": "0",
+      "location": "outdoor",
+      "lockable": "yes",
+      "motor_vehicle": "no",
+      "oneway": "no",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 6574812149,
+    "lat": 42.3939181,
+    "lng": -71.0707033,
+    "name": "Encore Boston Harbor Ferry Landing",
+    "tags": {
+      "amenity": "ferry_terminal",
+      "ferry": "yes",
+      "name": "Encore Boston Harbor Ferry Landing",
+      "public_transport": "station"
+    }
+  },
+  {
+    "id": 7633097998,
+    "lat": 42.3611236,
+    "lng": -71.0704848,
+    "tags": {
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 7745736333,
+    "lat": 42.3668297,
+    "lng": -71.0678442,
+    "tags": {
+      "access": "yes",
+      "door": "yes",
+      "level": "1",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 8439570745,
+    "lat": 42.3884145,
+    "lng": -71.1192218,
+    "tags": {
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 8441914310,
+    "lat": 42.3884644,
+    "lng": -71.1191773,
+    "tags": {
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 9590850618,
+    "lat": 42.3769871,
+    "lng": -71.0939352,
+    "name": "Union Square",
+    "tags": {
+      "addr:city": "Somerville",
+      "addr:housenumber": "50",
+      "addr:postcode": "02143",
+      "addr:state": "MA",
+      "addr:street": "Prospect Street",
+      "light_rail": "yes",
+      "name": "Union Square",
+      "network": "MBTA",
+      "network:wikidata": "Q171985",
+      "operator": "Massachusetts Bay Transportation Authority",
+      "operator:short": "MBTA",
+      "operator:wikidata": "Q171985",
+      "public_transport": "station",
+      "railway": "station",
+      "start_date": "2022-03-21",
+      "station": "light_rail",
+      "train": "yes",
+      "website": "https://www.mbta.com/stops/place-lech",
+      "wheelchair": "yes",
+      "wikidata": "Q7886040",
+      "wikipedia": "en:Union Square station (Somerville)"
+    }
+  },
+  {
+    "id": 9948920785,
+    "lat": 42.3797425,
+    "lng": -71.0869371,
+    "name": "East Somerville",
+    "tags": {
+      "addr:city": "Somerville",
+      "addr:housenumber": "134",
+      "addr:postcode": "02143",
+      "addr:state": "MA",
+      "addr:street": "Washington Street",
+      "check_date": "2022-12-12",
+      "light_rail": "yes",
+      "name": "East Somerville",
+      "network": "MBTA",
+      "network:wikidata": "Q171985",
+      "operator": "Massachusetts Bay Transportation Authority",
+      "operator:short": "MBTA",
+      "operator:wikidata": "Q171985",
+      "public_transport": "station",
+      "railway": "halt",
+      "start_date": "2022-12-12",
+      "station": "light_rail",
+      "website": "https://www.mbta.com/stops/place-esomr",
+      "wheelchair": "yes",
+      "wikidata": "Q14715418",
+      "wikipedia": "en:East Somerville station"
+    }
+  },
+  {
+    "id": 9948944847,
+    "lat": 42.3879349,
+    "lng": -71.0967886,
+    "name": "Gilman Square",
+    "tags": {
+      "check_date": "2022-12-12",
+      "light_rail": "yes",
+      "name": "Gilman Square",
+      "network": "MBTA",
+      "network:wikidata": "Q171985",
+      "operator": "Massachusetts Bay Transportation Authority",
+      "operator:short": "MBTA",
+      "operator:wikidata": "Q171985",
+      "public_transport": "station",
+      "railway": "halt",
+      "start_date": "2022-12-12",
+      "station": "light_rail",
+      "website": "https://www.mbta.com/stops/place-gilmn",
+      "wheelchair": "yes",
+      "wikidata": "Q5562479",
+      "wikipedia": "en:Gilman Square station"
+    }
+  },
+  {
+    "id": 9948947812,
+    "lat": 42.3942198,
+    "lng": -71.1067727,
+    "name": "Magoun Square",
+    "tags": {
+      "check_date": "2022-12-12",
+      "light_rail": "yes",
+      "name": "Magoun Square",
+      "network": "MBTA",
+      "network:wikidata": "Q171985",
+      "operator": "Massachusetts Bay Transportation Authority",
+      "operator:short": "MBTA",
+      "operator:wikidata": "Q171985",
+      "public_transport": "station",
+      "railway": "halt",
+      "start_date": "2022-12-12",
+      "station": "light_rail",
+      "website": "https://www.mbta.com/stops/place-mgngl",
+      "wheelchair": "yes",
+      "wikidata": "Q6693264",
+      "wikipedia": "en:Magoun Square station"
+    }
+  },
+  {
+    "id": 9948965331,
+    "lat": 42.4002187,
+    "lng": -71.1112549,
+    "name": "Ball Square",
+    "tags": {
+      "check_date": "2023-12-18",
+      "light_rail": "yes",
+      "name": "Ball Square",
+      "network": "MBTA",
+      "network:wikidata": "Q171985",
+      "operator": "Massachusetts Bay Transportation Authority",
+      "operator:short": "MBTA",
+      "operator:wikidata": "Q171985",
+      "public_transport": "station",
+      "railway": "halt",
+      "start_date": "2022-12-12",
+      "station": "light_rail",
+      "website": "https://www.mbta.com/stops/place-balsq",
+      "wheelchair": "yes",
+      "wikidata": "Q4851212",
+      "wikipedia": "en:Ball Square station"
+    }
+  },
+  {
+    "id": 11048802993,
+    "lat": 42.377391,
+    "lng": -71.0948461,
+    "tags": {
+      "bicycle": "no",
+      "foot": "designated",
+      "horse": "no",
+      "locked": "no",
+      "material": "metal",
+      "motor_vehicle": "no",
+      "opening_hours": "Mo-Sa 05:00-01:30, Su 06:00-01:30",
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 11189036603,
+    "lat": 42.3969804,
+    "lng": -71.1231731,
+    "tags": {
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 11189036604,
+    "lat": 42.3969966,
+    "lng": -71.1232719,
+    "tags": {
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 11189036605,
+    "lat": 42.3966873,
+    "lng": -71.1219195,
+    "tags": {
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 11630710775,
+    "lat": 42.3733812,
+    "lng": -71.119031,
+    "tags": {
+      "layer": "-1",
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 11902530754,
+    "lat": 42.3736992,
+    "lng": -71.0695051,
+    "tags": {
+      "railway": "subway_entrance"
+    }
+  },
+  {
+    "id": 12189198385,
+    "lat": 42.3667065,
+    "lng": -71.0679153,
+    "tags": {
+      "level": "1",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 13168660362,
+    "lat": 42.365157,
+    "lng": -71.103489,
+    "tags": {
+      "description": "Red Line Inbound only",
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 13191185635,
+    "lat": 42.3622863,
+    "lng": -71.0861117,
+    "tags": {
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 13191185638,
+    "lat": 42.3620144,
+    "lng": -71.0862512,
+    "tags": {
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "no"
+    }
+  },
+  {
+    "id": 13384417571,
+    "lat": 42.3687956,
+    "lng": -71.0762667,
+    "name": "Charles Riverboat Co",
+    "tags": {
+      "amenity": "ferry_terminal",
+      "check_date": "2025-12-17",
+      "ferry": "yes",
+      "name": "Charles Riverboat Co",
+      "public_transport": "station",
+      "website": "https://www.charlesriverboat.com"
+    }
+  },
+  {
+    "id": 13646944723,
+    "lat": 42.3571882,
+    "lng": -71.1391643,
+    "name": "Boston Landing",
+    "tags": {
+      "name": "Boston Landing",
+      "network": "MBTA",
+      "network:guid": "US-MA-MBTA",
+      "network:short": "MBTA",
+      "network:wikidata": "Q171985",
+      "network:wikipedia": "en:Massachusetts Bay Transportation Authority",
+      "operator": "Massachusetts Bay Transportation Authority",
+      "operator:wikidata": "Q171985",
+      "public_transport": "station",
+      "railway": "station",
+      "train": "yes",
+      "wheelchair": "yes",
+      "wikidata": "Q12063806"
+    }
+  },
+  {
+    "id": 13719755786,
+    "lat": 42.3666696,
+    "lng": -71.0679387,
+    "tags": {
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  },
+  {
+    "id": 13719755788,
+    "lat": 42.3668637,
+    "lng": -71.067731,
+    "tags": {
+      "level": "0",
+      "railway": "subway_entrance",
+      "wheelchair": "yes"
+    }
+  }
+]
