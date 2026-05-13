@@ -11,16 +11,30 @@
 		bruteForce,
 		theme,
 		THEMES,
+		TRAFFIC_SIGNALS,
+		BOARD_CANDIDATES,
+		TRANSIT_POINTS,
+		OVERPASS_SUMMARY,
 		type ThemeName,
 		type ThemeTokens,
 		type SolverResult,
-		type FlyerLocation
+		type FlyerLocation,
+		type OverpassPOI
 	} from '$lib';
 
 	let map: L.Map | null = $state(null);
 	let tileLayer: L.TileLayer | null = $state(null);
 	let routeLayer: L.Polyline | null = $state(null);
 	let markers: L.CircleMarker[] = $state([]);
+
+	// Overpass layer groups
+	let signalsLayer: L.LayerGroup | null = null;
+	let boardsLayer: L.LayerGroup | null = null;
+	let transitLayer: L.LayerGroup | null = null;
+
+	let showSignals = $state(false);
+	let showBoards = $state(false);
+	let showTransit = $state(false);
 	let solverResult: SolverResult | null = $state(null);
 	let selectedAlgorithm = $state<'nearest' | '2opt' | 'brute'>('nearest');
 	let startIdx = $state(0);
@@ -178,7 +192,79 @@
 		tileLayer = L.tileLayer(t.mapTile, { attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 19 }).addTo(map);
 		updateMarkerStyles();
 		if (solverResult) drawRoute(solverResult.route);
+		// Rebuild overlay layers with new theme colors
+		rebuildLayer('signals');
+		rebuildLayer('boards');
+		rebuildLayer('transit');
 	}
+
+	function rebuildLayer(which: 'signals' | 'boards' | 'transit') {
+		if (!map) return;
+		const t = tokens();
+
+		if (which === 'signals') {
+			if (signalsLayer) { map.removeLayer(signalsLayer); signalsLayer = null; }
+			if (!showSignals) return;
+			signalsLayer = L.layerGroup();
+			TRAFFIC_SIGNALS.forEach((p) => {
+				L.circleMarker([p.lat, p.lng], {
+					radius: 2,
+					fillColor: '#ef4444',
+					color: 'transparent',
+					weight: 0,
+					fillOpacity: 0.5
+				}).addTo(signalsLayer!);
+			});
+			signalsLayer.addTo(map);
+		}
+
+		if (which === 'boards') {
+			if (boardsLayer) { map.removeLayer(boardsLayer); boardsLayer = null; }
+			if (!showBoards) return;
+			boardsLayer = L.layerGroup();
+			BOARD_CANDIDATES.forEach((p) => {
+				const amenity = p.tags.amenity || p.tags.shop || 'other';
+				const color = amenity === 'library' ? '#3b82f6'
+					: amenity === 'cafe' ? '#a855f7'
+					: amenity === 'community_centre' ? '#14b8a6'
+					: amenity === 'books' ? '#f59e0b'
+					: '#71717a';
+				const marker = L.circleMarker([p.lat, p.lng], {
+					radius: 3,
+					fillColor: color,
+					color: 'transparent',
+					weight: 0,
+					fillOpacity: 0.7
+				}).addTo(boardsLayer!);
+				const label = p.name || `(unnamed ${amenity})`;
+				marker.bindPopup(`<div style="color:#1a1a1a;font-family:inherit;min-width:140px;font-size:0.75rem;"><strong>${label}</strong><br/><span style="color:#666;font-size:0.7rem;">${amenity}</span></div>`);
+			});
+			boardsLayer.addTo(map);
+		}
+
+		if (which === 'transit') {
+			if (transitLayer) { map.removeLayer(transitLayer); transitLayer = null; }
+			if (!showTransit) return;
+			transitLayer = L.layerGroup();
+			TRANSIT_POINTS.forEach((p) => {
+				const marker = L.circleMarker([p.lat, p.lng], {
+					radius: 4,
+					fillColor: '#10b981',
+					color: '#10b981',
+					weight: 1,
+					fillOpacity: 0.6
+				}).addTo(transitLayer!);
+				const label = p.name || 'Transit point';
+				const kind = p.tags.railway || p.tags.public_transport || 'station';
+				marker.bindPopup(`<div style="color:#1a1a1a;font-family:inherit;min-width:140px;font-size:0.75rem;"><strong>${label}</strong><br/><span style="color:#666;font-size:0.7rem;">${kind}</span></div>`);
+			});
+			transitLayer.addTo(map);
+		}
+	}
+
+	function toggleSignals() { showSignals = !showSignals; rebuildLayer('signals'); }
+	function toggleBoards() { showBoards = !showBoards; rebuildLayer('boards'); }
+	function toggleTransit() { showTransit = !showTransit; rebuildLayer('transit'); }
 
 	function cycleTheme() {
 		const order: ThemeName[] = ['dark', 'cambridge', 'light'];
@@ -372,6 +458,31 @@
 						{/each}
 					</div>
 				{/if}
+			</section>
+
+			<section class="section">
+				<h2>Layers</h2>
+				<div class="layer-toggles">
+					<label class="layer-toggle">
+						<input type="checkbox" checked={showSignals} onchange={toggleSignals} />
+						<span class="layer-dot" style="background:#ef4444;"></span>
+						<span class="layer-label">Traffic signals</span>
+						<span class="layer-count">{OVERPASS_SUMMARY.counts.trafficSignals}</span>
+					</label>
+					<label class="layer-toggle">
+						<input type="checkbox" checked={showBoards} onchange={toggleBoards} />
+						<span class="layer-dot" style="background:#a855f7;"></span>
+						<span class="layer-label">Bulletin boards</span>
+						<span class="layer-count">{BOARD_CANDIDATES.length}</span>
+					</label>
+					<label class="layer-toggle">
+						<input type="checkbox" checked={showTransit} onchange={toggleTransit} />
+						<span class="layer-dot" style="background:#10b981;"></span>
+						<span class="layer-label">Transit</span>
+						<span class="layer-count">{OVERPASS_SUMMARY.counts.transit}</span>
+					</label>
+				</div>
+				<p class="layer-source">Data: OpenStreetMap (Overpass API)</p>
 			</section>
 
 			<section class="section legend">
@@ -955,6 +1066,59 @@
 	.legal-category.permitted { color: var(--text-dim); }
 	.legal-desc { margin: 0.15rem 0 0; font-size: 0.75rem; line-height: 1.55; color: var(--text-dim); text-align: justify; hyphens: auto; font-family: 'Georgia', serif; }
 	.legal-penalty { font-size: 0.7rem; color: var(--text-muted); font-family: 'SF Mono', 'Fira Code', monospace; margin-top: 0.15rem; }
+
+	/* Layers */
+	.layer-toggles {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+
+	.layer-toggle {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding: 0.4rem 0.6rem;
+		border: 1px solid var(--border);
+		border-radius: 4px;
+		font-size: 0.78rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.layer-toggle:hover {
+		border-color: var(--text-muted);
+		color: var(--text);
+	}
+
+	.layer-toggle input[type="checkbox"] {
+		margin: 0;
+		cursor: pointer;
+		accent-color: var(--text);
+	}
+
+	.layer-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	.layer-label { flex: 1; }
+
+	.layer-count {
+		color: var(--text-dim);
+		font-family: 'SF Mono', 'Fira Code', monospace;
+		font-size: 0.72rem;
+	}
+
+	.layer-source {
+		margin: 0.5rem 0 0;
+		font-size: 0.7rem;
+		color: var(--text-dim);
+		font-style: italic;
+	}
 
 	/* Legend */
 	.legend { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-subtle); }
