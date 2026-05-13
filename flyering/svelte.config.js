@@ -7,13 +7,17 @@ const config = {
       filename.split(/[/\\]/).includes("node_modules") ? undefined : true,
   },
   kit: {
+    // adapter-static for Firebase Hosting
     adapter: adapter({
-      pages: "build",
-      assets: "build",
+      pages: "build/stories/flyering",
+      assets: "build/stories/flyering",
       fallback: "index.html",
       precompress: false,
       strict: true,
     }),
+    paths: {
+      base: "/stories/flyering",
+    },
     prerender: {
       entries: ["*"],
       handleUnseenRoutes: "ignore",

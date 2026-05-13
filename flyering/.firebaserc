@@ -1,5 +1,14 @@
 {
 	"projects": {
-		"default": ""
+		"default": "experiments-390b7"
+	},
+	"targets": {
+		"experiments-390b7": {
+			"hosting": {
+				"letters-cambridge": [
+					"letters-cambridge"
+				]
+			}
+		}
 	}
 }

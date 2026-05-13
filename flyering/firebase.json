@@ -1,11 +1,12 @@
 {
   "hosting": {
+    "target": "letters-cambridge",
     "public": "build",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
-        "source": "**",
-        "destination": "/index.html"
+        "source": "/stories/flyering/**",
+        "destination": "/stories/flyering/index.html"
       }
     ],
     "headers": [
@@ -19,7 +20,7 @@
         ]
       },
       {
-        "source": "**/*.@(html)",
+        "source": "**/*.html",
         "headers": [
           {
             "key": "Cache-Control",
