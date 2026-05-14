@@ -4,6 +4,7 @@
 	import {
 		LOCATIONS,
 		CAMBRIDGE_BOUNDS,
+		FLYER_POPULATION_ESTIMATE,
 		LEGAL_RULES,
 		buildDistanceMatrix,
 		nearestNeighbor,
@@ -15,11 +16,13 @@
 		BOARD_CANDIDATES,
 		TRANSIT_POINTS,
 		OVERPASS_SUMMARY,
+		EVIDENCE_PHOTOS,
 		type ThemeName,
 		type ThemeTokens,
 		type SolverResult,
 		type FlyerLocation,
-		type OverpassPOI
+		type OverpassPOI,
+		type EvidencePhoto
 	} from '$lib';
 
 	let map: L.Map | null = $state(null);
@@ -31,10 +34,12 @@
 	let signalsLayer: L.LayerGroup | null = null;
 	let boardsLayer: L.LayerGroup | null = null;
 	let transitLayer: L.LayerGroup | null = null;
+	let photosLayer: L.LayerGroup | null = null;
 
 	let showSignals = $state(false);
 	let showBoards = $state(false);
 	let showTransit = $state(false);
+	let showPhotos = $state(true);
 	let solverResult: SolverResult | null = $state(null);
 	let selectedAlgorithm = $state<'nearest' | '2opt' | 'brute'>('nearest');
 	let startIdx = $state(0);
@@ -196,9 +201,10 @@
 		rebuildLayer('signals');
 		rebuildLayer('boards');
 		rebuildLayer('transit');
+		rebuildLayer('photos');
 	}
 
-	function rebuildLayer(which: 'signals' | 'boards' | 'transit') {
+	function rebuildLayer(which: 'signals' | 'boards' | 'transit' | 'photos') {
 		if (!map) return;
 		const t = tokens();
 
@@ -260,11 +266,39 @@
 			});
 			transitLayer.addTo(map);
 		}
+
+		if (which === 'photos') {
+			if (photosLayer) { map.removeLayer(photosLayer); photosLayer = null; }
+			if (!showPhotos) return;
+			photosLayer = L.layerGroup();
+			EVIDENCE_PHOTOS.forEach((photo) => {
+				const marker = L.circleMarker(photo.coords, {
+					radius: 7,
+					fillColor: t.accent,
+					color: '#ffffff',
+					weight: 2,
+					opacity: 1,
+					fillOpacity: 0.9
+				}).addTo(photosLayer!);
+
+				const dateStr = photo.takenAt ? new Date(photo.takenAt).toLocaleString() : 'unknown';
+				marker.bindPopup(`
+					<div style="color:#1a1a1a;font-family:inherit;min-width:200px;line-height:1.5;">
+						<strong style="font-size:0.8rem;">Flyer photo</strong><br/>
+						<span style="color:#666;font-size:0.7rem;">${dateStr}</span><br/>
+						<img src="${base}/evidence/${photo.filename}" alt="Flyer evidence" style="width:100%;border-radius:4px;margin:0.5rem 0;max-height:240px;object-fit:cover;" />
+						<span style="font-size:0.65rem;color:#888;font-family:monospace;">${photo.coords[0].toFixed(5)}, ${photo.coords[1].toFixed(5)}</span>
+					</div>
+				`, { maxWidth: 260 });
+			});
+			photosLayer.addTo(map);
+		}
 	}
 
 	function toggleSignals() { showSignals = !showSignals; rebuildLayer('signals'); }
 	function toggleBoards() { showBoards = !showBoards; rebuildLayer('boards'); }
 	function toggleTransit() { showTransit = !showTransit; rebuildLayer('transit'); }
+	function togglePhotos() { showPhotos = !showPhotos; rebuildLayer('photos'); }
 
 	function cycleTheme() {
 		const order: ThemeName[] = ['dark', 'cambridge', 'light'];
@@ -350,6 +384,7 @@
 			markers.push(marker);
 		});
 		solve();
+		rebuildLayer('photos');
 	});
 </script>
 
@@ -428,8 +463,8 @@
 						<div class="stat-row"><span>Distance</span><span class="stat-value">{solverResult.distance.toFixed(2)} mi</span></div>
 						<div class="stat-row"><span>Stops</span><span class="stat-value">{solverResult.route.length}</span></div>
 						{#if solverResult.iterations}<div class="stat-row"><span>Iterations</span><span class="stat-value">{solverResult.iterations.toLocaleString()}</span></div>{/if}
-						<div class="stat-row"><span>Confirmed</span><span class="stat-value">{LOCATIONS.filter(l => l.confirmed).length}/{LOCATIONS.length}</span></div>
 					</div>
+
 					<ol class="route-list">
 						{#each solverResult.route as idx, i}
 							<li>
@@ -444,6 +479,29 @@
 					<div class="route-return">Return to {LOCATIONS[startIdx].name}</div>
 				</section>
 			{/if}
+
+			<!-- Flyer Census -->
+			<section class="section">
+				<h2>Flyer Census</h2>
+				<div class="census-grid">
+					<div class="census-card">
+						<span class="census-value">{EVIDENCE_PHOTOS.length}</span>
+						<span class="census-label">Found</span>
+					</div>
+					<div class="census-card">
+						<span class="census-value">{FLYER_POPULATION_ESTIMATE}</span>
+						<span class="census-label">Estimated</span>
+					</div>
+					<div class="census-card">
+						<span class="census-value">{Math.round((EVIDENCE_PHOTOS.length / FLYER_POPULATION_ESTIMATE) * 100)}%</span>
+						<span class="census-label">Confirmed</span>
+					</div>
+				</div>
+				<div class="census-bar">
+					<div class="census-bar-fill" style="width: {(EVIDENCE_PHOTOS.length / FLYER_POPULATION_ESTIMATE) * 100}%"></div>
+				</div>
+				<p class="census-note">{FLYER_POPULATION_ESTIMATE - EVIDENCE_PHOTOS.length} flyers still unaccounted for. Ride out and find them.</p>
+			</section>
 
 			<section class="section">
 				<button class="section-toggle" onclick={() => (showLegal = !showLegal)}><h2>Legal</h2><span class="toggle-indicator">{showLegal ? '−' : '+'}</span></button>
@@ -464,6 +522,12 @@
 				<h2>Layers</h2>
 				<div class="layer-toggles">
 					<label class="layer-toggle">
+						<input type="checkbox" checked={showPhotos} onchange={togglePhotos} />
+						<span class="layer-dot" style="background:var(--accent);"></span>
+						<span class="layer-label">Flyer photos</span>
+						<span class="layer-count">{EVIDENCE_PHOTOS.length}</span>
+					</label>
+					<label class="layer-toggle">
 						<input type="checkbox" checked={showSignals} onchange={toggleSignals} />
 						<span class="layer-dot" style="background:#ef4444;"></span>
 						<span class="layer-label">Traffic signals</span>
@@ -482,7 +546,7 @@
 						<span class="layer-count">{OVERPASS_SUMMARY.counts.transit}</span>
 					</label>
 				</div>
-				<p class="layer-source">Data: OpenStreetMap (Overpass API)</p>
+				<p class="layer-source">Photos: EXIF GPS · Other: OpenStreetMap</p>
 			</section>
 
 			<section class="section legend">
@@ -541,7 +605,7 @@
 						<span class="sheet-stat-sep">·</span>
 						<span class="sheet-stat">{solverResult.route.length} stops</span>
 						<span class="sheet-stat-sep">·</span>
-						<span class="sheet-stat">{LOCATIONS.filter(l => l.confirmed).length} confirmed</span>
+						<span class="sheet-stat">{EVIDENCE_PHOTOS.length}/{FLYER_POPULATION_ESTIMATE} found</span>
 					</div>
 				{/if}
 
@@ -961,6 +1025,63 @@
 	.evidence-btn { background: none; border: 1px solid var(--accent); color: var(--accent); font-size: 0.6rem; width: 1.2rem; height: 1.2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-left: auto; flex-shrink: 0; opacity: 0.7; transition: all 0.15s; }
 	.evidence-btn:hover { opacity: 1; background: var(--accent); color: var(--bg); }
 	.route-return { margin-top: 0.5rem; font-size: 0.7rem; color: var(--text-dim); font-style: italic; opacity: 0.6; }
+
+	/* Flyer Census */
+	.census-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.5rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.census-card {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		padding: 0.75rem;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: 6px;
+	}
+
+	.census-value {
+		font-size: 1.4rem;
+		font-weight: 500;
+		color: var(--text);
+		font-family: 'Georgia', serif;
+		line-height: 1.1;
+	}
+
+	.census-label {
+		font-size: 0.65rem;
+		color: var(--text-dim);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin-top: 0.25rem;
+	}
+
+	.census-bar {
+		height: 4px;
+		background: var(--bg-card);
+		border-radius: 2px;
+		overflow: hidden;
+		margin-bottom: 0.5rem;
+	}
+
+	.census-bar-fill {
+		height: 100%;
+		background: var(--accent);
+		border-radius: 2px;
+		transition: width 0.3s ease;
+	}
+
+	.census-note {
+		margin: 0;
+		font-size: 0.72rem;
+		color: var(--text-dim);
+		font-style: italic;
+		font-family: 'Georgia', serif;
+	}
 
 	/* Evidence viewer */
 	.evidence-overlay {
