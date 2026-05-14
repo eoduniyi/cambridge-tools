@@ -2,6 +2,7 @@ export {
   LOCATIONS,
   ANCHOR,
   CAMBRIDGE_BOUNDS,
+  FLYER_POPULATION_ESTIMATE,
   type FlyerLocation,
 } from "./data/locations";
 export { LEGAL_RULES, type LegalRule } from "./data/legal";
@@ -25,3 +26,4 @@ export {
   OVERPASS_SUMMARY,
   type OverpassPOI,
 } from "./data/overpass-data";
+export { EVIDENCE_PHOTOS, type EvidencePhoto } from "./data/evidence-photos";
