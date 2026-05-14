@@ -33,6 +33,12 @@ export const CAMBRIDGE_BOUNDS = {
   areaSqMi: 6.43,
 };
 
+/**
+ * Estimated total flyers placed across Cambridge.
+ * Based on volunteer activity reports — adjust as new info comes in.
+ */
+export const FLYER_POPULATION_ESTIMATE = 60;
+
 export const ANCHOR: FlyerLocation = {
   id: "cpl-main",
   name: "Cambridge Public Library - Main Branch",
