@@ -785,6 +785,69 @@
 						{/each}
 					</ol>
 				{/if}
+
+				<!-- Legal section -->
+				<section class="mobile-section">
+					<button class="section-toggle" onclick={() => (showLegal = !showLegal)}>
+						<h3>Legal</h3>
+						<span class="toggle-indicator">{showLegal ? '−' : '+'}</span>
+					</button>
+					{#if showLegal}
+						<div class="legal-list">
+							{#each LEGAL_RULES as rule}
+								<div class="legal-item">
+									<div class="legal-header">
+										<span class="legal-title">{rule.title}</span>
+										<span class="legal-category" class:prohibited={rule.category === 'prohibited'} class:permitted={rule.category === 'permitted'}>{rule.category}</span>
+									</div>
+									<p class="legal-desc">{rule.description}</p>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</section>
+
+				<!-- Layers section -->
+				<section class="mobile-section">
+					<h3>Layers</h3>
+					<div class="layer-toggles">
+						<label class="layer-toggle">
+							<input type="checkbox" checked={showPhotos} onchange={togglePhotos} />
+							<span class="layer-dot" style="background:var(--accent);"></span>
+							<span class="layer-label">Flyer photos</span>
+							<span class="layer-count">{EVIDENCE_PHOTOS.length}</span>
+						</label>
+						<label class="layer-toggle">
+							<input type="checkbox" checked={showSignals} onchange={toggleSignals} />
+							<span class="layer-dot" style="background:#ef4444;"></span>
+							<span class="layer-label">Traffic signals</span>
+							<span class="layer-count">{OVERPASS_SUMMARY.counts.trafficSignals}</span>
+						</label>
+						<label class="layer-toggle">
+							<input type="checkbox" checked={showBoards} onchange={toggleBoards} />
+							<span class="layer-dot" style="background:#a855f7;"></span>
+							<span class="layer-label">Bulletin boards</span>
+							<span class="layer-count">{BOARD_CANDIDATES.length}</span>
+						</label>
+						<label class="layer-toggle">
+							<input type="checkbox" checked={showTransit} onchange={toggleTransit} />
+							<span class="layer-dot" style="background:#10b981;"></span>
+							<span class="layer-label">Transit</span>
+							<span class="layer-count">{OVERPASS_SUMMARY.counts.transit}</span>
+						</label>
+					</div>
+				</section>
+
+				<!-- Map legend -->
+				<section class="mobile-section">
+					<h3>Map Legend</h3>
+					<div class="legend-items">
+						<div class="legend-row"><span class="legend-dot start"></span><span>Start point</span></div>
+						<div class="legend-row"><span class="legend-dot bright"></span><span>Permitted</span></div>
+						<div class="legend-row"><span class="legend-dot mid"></span><span>Ask permission</span></div>
+						<div class="legend-row"><span class="legend-dot dim"></span><span>Restricted</span></div>
+					</div>
+				</section>
 			</div>
 		</div>
 
@@ -1514,6 +1577,53 @@
 		background: var(--bg-card);
 		color: var(--text);
 		border-color: var(--text-dim);
+	}
+
+	/* Mobile sections in sheet */
+	.mobile-section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		padding: 0.5rem 0;
+		border-top: 1px solid var(--border-subtle);
+	}
+
+	.mobile-section h3 {
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--text-dim);
+		font-weight: 500;
+	}
+
+	.mobile-section .section-toggle {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		width: 100%;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		color: inherit;
+	}
+
+	.mobile-section .section-toggle h3 {
+		margin: 0;
+	}
+
+	.mobile-section .legal-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		max-height: 200px;
+		overflow-y: auto;
+	}
+
+	.mobile-section .legend-items {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
 	}
 
 	/* ===== Mobile: Algorithm Overlay ===== */
