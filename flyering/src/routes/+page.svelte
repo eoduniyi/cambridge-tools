@@ -25,6 +25,19 @@
 		type EvidencePhoto
 	} from '$lib';
 
+	// Geolocation state
+	let userCoords = $state<[number, number] | null>(null);
+	let userMarker: L.Marker | null = $state(null);
+	let watchId = $state<number | null>(null);
+
+	// Persistence & Edits
+	let modifiedLocations = $state<Record<string, Partial<FlyerLocation>>>({});
+	let addedLocations = $state<FlyerLocation[]>([]);
+	let effectiveLocations = $derived([
+		...LOCATIONS.map(loc => ({ ...loc, ...(modifiedLocations[loc.id] || {}) })),
+		...addedLocations
+	]);
+
 	let map: L.Map | null = $state(null);
 	let tileLayer: L.TileLayer | null = $state(null);
 	let routeLayer: L.Polyline | null = $state(null);
@@ -66,7 +79,149 @@
 	let dragOffsetX = 0;
 	let dragOffsetY = 0;
 
-	const matrix = buildDistanceMatrix(LOCATIONS);
+	const matrix = $derived(buildDistanceMatrix(effectiveLocations));
+
+	function saveToStorage() {
+		localStorage.setItem('flyer-modifications', JSON.stringify(modifiedLocations));
+		localStorage.setItem('flyer-additions', JSON.stringify(addedLocations));
+	}
+
+	function loadFromStorage() {
+		try {
+			const mods = localStorage.getItem('flyer-modifications');
+			const adds = localStorage.getItem('flyer-additions');
+			if (mods) modifiedLocations = JSON.parse(mods);
+			if (adds) addedLocations = JSON.parse(adds);
+		} catch (e) {
+			console.error('Failed to load from storage', e);
+		}
+	}
+
+	async function toggleGeolocation() {
+		if (watchId !== null) {
+			navigator.geolocation.clearWatch(watchId);
+			watchId = null;
+			if (userMarker && map) { map.removeLayer(userMarker); userMarker = null; }
+			userCoords = null;
+			return;
+		}
+
+		if (!navigator.geolocation) { alert('Geolocation not supported'); return; }
+
+		const L = await import('leaflet');
+		watchId = navigator.geolocation.watchPosition(
+			(pos) => {
+				const { latitude, longitude } = pos.coords;
+				userCoords = [latitude, longitude];
+				if (map) {
+					if (!userMarker) {
+						userMarker = L.marker(userCoords, {
+							icon: L.divIcon({
+								className: 'user-location-marker',
+								html: '<div class="user-dot"></div>',
+								iconSize: [20, 20],
+								iconAnchor: [10, 10]
+							})
+						}).addTo(map);
+					} else {
+						userMarker.setLatLng(userCoords);
+					}
+				}
+			},
+			(err) => { console.error(err); alert('Location access denied'); watchId = null; },
+			{ enableHighAccuracy: true }
+		);
+	}
+
+	function updateLocationStatus(id: string, confirmed: boolean) {
+		if (!modifiedLocations[id]) modifiedLocations[id] = {};
+		modifiedLocations[id].confirmed = confirmed;
+		modifiedLocations[id].confirmedDate = confirmed ? new Date().toISOString().split('T')[0] : undefined;
+		saveToStorage();
+		refreshMarkers();
+	}
+
+	function updateLocationNotes(id: string, notes: string) {
+		if (!modifiedLocations[id]) modifiedLocations[id] = {};
+		modifiedLocations[id].notes = notes;
+		saveToStorage();
+		refreshMarkers();
+	}
+
+	function addNewSpot() {
+		if (!userCoords) { alert('Enable GPS to add a spot at your current location'); return; }
+		const name = prompt('Spot name?');
+		if (!name) return;
+		
+		const newLoc: FlyerLocation = {
+			id: `user-${Date.now()}`,
+			name,
+			coords: userCoords,
+			neighborhood: 'Cambridge',
+			type: 'park', // default
+			legal: 'ask-permission',
+			confirmed: true,
+			confirmedDate: new Date().toISOString().split('T')[0],
+			notes: 'Added on the fly.'
+		};
+		addedLocations = [...addedLocations, newLoc];
+		saveToStorage();
+		refreshMarkers();
+	}
+
+	function refreshMarkers() {
+		if (!map) return;
+		markers.forEach(m => map!.removeLayer(m));
+		markers = [];
+		const t = tokens();
+		effectiveLocations.forEach((loc, idx) => {
+			const isStart = idx === startIdx;
+			const fillColor = loc.legal === 'permitted' ? t.markerBright : loc.legal === 'ask-permission' ? t.markerMid : t.markerDim;
+			const marker = L.circleMarker(loc.coords, {
+				radius: isStart ? 8 : 5, fillColor, color: isStart ? t.text : 'transparent',
+				weight: isStart ? 2 : 0, opacity: 1, fillOpacity: isStart ? 1 : 0.7
+			}).addTo(map!);
+
+			marker.bindPopup(() => {
+				const div = document.createElement('div');
+				div.style.cssText = 'color:#1a1a1a;font-family:inherit;min-width:200px;line-height:1.5;';
+				
+				let html = `<strong style="font-size:0.85rem;">${loc.name}</strong><br/>`;
+				html += `<span style="color:#555;font-size:0.75rem;">${loc.neighborhood}</span><br/>`;
+				if (loc.evidence) {
+					html += `<img src="${base}/evidence/${loc.evidence}" alt="Flyer" style="width:100%;border-radius:4px;margin:0.5rem 0;max-height:160px;object-fit:cover;" />`;
+				}
+				html += `<p style="font-size:0.7rem;color:#333;margin:0.4rem 0;">${loc.notes}</p>`;
+				
+				div.innerHTML = html;
+
+				const btnRow = document.createElement('div');
+				btnRow.style.cssText = 'display:flex;gap:0.4rem;margin-top:0.5rem;';
+
+				const confBtn = document.createElement('button');
+				confBtn.innerText = loc.confirmed ? 'Unmark' : 'Confirm';
+				confBtn.style.cssText = 'font-size:0.6rem;padding:0.2rem 0.4rem;cursor:pointer;background:#2a5a3a;color:#fff;border:none;border-radius:2px;';
+				confBtn.onclick = () => { updateLocationStatus(loc.id, !loc.confirmed); marker.closePopup(); };
+				
+				const noteBtn = document.createElement('button');
+				noteBtn.innerText = 'Edit Notes';
+				noteBtn.style.cssText = 'font-size:0.6rem;padding:0.2rem 0.4rem;cursor:pointer;background:#444;color:#fff;border:none;border-radius:2px;';
+				noteBtn.onclick = () => {
+					const n = prompt('Notes?', loc.notes);
+					if (n !== null) { updateLocationNotes(loc.id, n); marker.closePopup(); }
+				};
+
+				btnRow.appendChild(confBtn);
+				btnRow.appendChild(noteBtn);
+				div.appendChild(btnRow);
+
+				return div;
+			}, { maxWidth: 240 });
+			
+			markers.push(marker);
+		});
+		solve();
+	}
 
 	$effect(() => { theme.set(currentTheme); });
 
@@ -149,8 +304,8 @@
 		if (!map) return;
 		if (routeLayer) map.removeLayer(routeLayer);
 		const t = tokens();
-		const coords = route.map((idx) => LOCATIONS[idx].coords as [number, number]);
-		coords.push(LOCATIONS[route[0]].coords);
+		const coords = route.map((idx) => effectiveLocations[idx].coords as [number, number]);
+		coords.push(effectiveLocations[route[0]].coords);
 		if (animating) { animateRoute(coords, t); }
 		else { routeLayer = L.polyline(coords, { color: t.text, weight: 1.5, opacity: 0.5, dashArray: '6, 6' }).addTo(map); }
 	}
@@ -183,7 +338,7 @@
 		if (!map) return;
 		const t = tokens();
 		markers.forEach((marker, idx) => {
-			const loc = LOCATIONS[idx];
+			const loc = effectiveLocations[idx];
 			const isStart = idx === startIdx;
 			const fillColor = loc.legal === 'permitted' ? t.markerBright : loc.legal === 'ask-permission' ? t.markerMid : t.markerDim;
 			marker.setStyle({ fillColor, color: isStart ? t.text : 'transparent', weight: isStart ? 2 : 0, radius: isStart ? 8 : 5 });
@@ -353,37 +508,14 @@
 	}
 
 	onMount(async () => {
+		loadFromStorage();
 		const L = await import('leaflet');
 		const t = tokens();
 		map = L.map('map', { center: CAMBRIDGE_BOUNDS.center, zoom: 14, zoomControl: false });
 		L.control.zoom({ position: 'bottomright' }).addTo(map);
 		tileLayer = L.tileLayer(t.mapTile, { attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 19 }).addTo(map);
 
-		LOCATIONS.forEach((loc, idx) => {
-			const isStart = idx === startIdx;
-			const fillColor = loc.legal === 'permitted' ? t.markerBright : loc.legal === 'ask-permission' ? t.markerMid : t.markerDim;
-			const marker = L.circleMarker(loc.coords, {
-				radius: isStart ? 8 : 5, fillColor, color: isStart ? t.text : 'transparent',
-				weight: isStart ? 2 : 0, opacity: 1, fillOpacity: isStart ? 1 : 0.7
-			}).addTo(map!);
-
-			// Build popup with photo if evidence exists
-			let popupContent = `<div style="color:#1a1a1a;font-family:inherit;min-width:200px;line-height:1.5;">`;
-			popupContent += `<strong style="font-size:0.85rem;">${loc.name}</strong><br/>`;
-			popupContent += `<span style="color:#555;font-size:0.75rem;">${loc.neighborhood}</span><br/>`;
-			if (loc.evidence) {
-				popupContent += `<img src="${base}/evidence/${loc.evidence}" alt="Flyer at ${loc.name}" style="width:100%;border-radius:4px;margin:0.5rem 0;max-height:200px;object-fit:cover;" />`;
-			}
-			popupContent += `<span style="font-size:0.7rem;color:#333;">${loc.notes}</span>`;
-			if (loc.confirmed) {
-				popupContent += `<br/><span style="display:inline-block;background:#2a5a3a;color:#fff;font-size:0.6rem;padding:0.1rem 0.35rem;border-radius:2px;margin-top:0.4rem;">${loc.confirmedDate || 'confirmed'}</span>`;
-			}
-			popupContent += `</div>`;
-
-			marker.bindPopup(popupContent, { maxWidth: 240 });
-			markers.push(marker);
-		});
-		solve();
+		refreshMarkers();
 		rebuildLayer('photos');
 	});
 </script>
@@ -411,9 +543,19 @@
 		<!-- Desktop sidebar -->
 		<aside class="panel desktop-only">
 			<section class="section">
+				<h2>GPS</h2>
+				<div class="actions" style="margin-top:0;">
+					<button class="action-btn" class:active={watchId !== null} onclick={toggleGeolocation}>
+						{watchId !== null ? 'Stop Tracking' : 'Find My Location'}
+					</button>
+					<button class="action-btn" onclick={addNewSpot}>Register Spot Here</button>
+				</div>
+			</section>
+
+			<section class="section">
 				<h2>Start</h2>
 				<select class="start-select" bind:value={startIdx} onchange={() => solve()}>
-					{#each LOCATIONS as loc, i}
+					{#each effectiveLocations as loc, i}
 						<option value={i}>{loc.name}{loc.confirmed ? ' ✓' : ''}</option>
 					{/each}
 				</select>
@@ -469,14 +611,14 @@
 						{#each solverResult.route as idx, i}
 							<li>
 								<span class="stop-num">{i + 1}</span>
-								<span class="stop-name">{LOCATIONS[idx].name}</span>
-								{#if LOCATIONS[idx].confirmed}
-									<button class="evidence-btn" onclick={() => (evidenceLocation = LOCATIONS[idx])} title="View evidence">✓</button>
+								<span class="stop-name">{effectiveLocations[idx].name}</span>
+								{#if effectiveLocations[idx].confirmed}
+									<button class="evidence-btn" onclick={() => (evidenceLocation = effectiveLocations[idx])} title="View evidence">✓</button>
 								{/if}
 							</li>
 						{/each}
 					</ol>
-					<div class="route-return">Return to {LOCATIONS[startIdx].name}</div>
+					<div class="route-return">Return to {effectiveLocations[startIdx].name}</div>
 				</section>
 			{/if}
 
@@ -565,6 +707,12 @@
 
 		<!-- Mobile FABs -->
 		<div class="fab-group mobile-only">
+			<button class="fab" class:active={watchId !== null} onclick={toggleGeolocation} title="Find Me">
+				{watchId !== null ? '◎' : '⊕'}
+			</button>
+			<button class="fab" onclick={addNewSpot} title="Add Spot">
+				+
+			</button>
 			<button class="fab" onclick={cycleTheme} title="Theme">
 				{currentTheme === 'dark' ? '●' : currentTheme === 'cambridge' ? '◐' : '○'}
 			</button>
@@ -618,7 +766,7 @@
 
 				<!-- Start selector -->
 				<select class="start-select" bind:value={startIdx} onchange={() => solve()}>
-					{#each LOCATIONS as loc, i}
+					{#each effectiveLocations as loc, i}
 						<option value={i}>{loc.name}{loc.confirmed ? ' ✓' : ''}</option>
 					{/each}
 				</select>
@@ -629,9 +777,9 @@
 						{#each solverResult.route as idx, i}
 							<li>
 								<span class="stop-num">{i + 1}</span>
-								<span class="stop-name">{LOCATIONS[idx].name}</span>
-								{#if LOCATIONS[idx].confirmed}
-									<button class="evidence-btn" onclick={() => (evidenceLocation = LOCATIONS[idx])} title="View evidence">✓</button>
+								<span class="stop-name">{effectiveLocations[idx].name}</span>
+								{#if effectiveLocations[idx].confirmed}
+									<button class="evidence-btn" onclick={() => (evidenceLocation = effectiveLocations[idx])} title="View evidence">✓</button>
 								{/if}
 							</li>
 						{/each}
@@ -1383,5 +1531,39 @@
 			font-size: 0.85rem;
 			padding: 0.6rem 0.75rem;
 		}
+	}
+
+	.fab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+	.action-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+	:global(.user-location-marker) {
+		pointer-events: none;
+	}
+
+	:global(.user-dot) {
+		width: 14px;
+		height: 14px;
+		background: #3b82f6;
+		border: 2px solid white;
+		border-radius: 50%;
+		box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+		position: relative;
+	}
+
+	:global(.user-dot::after) {
+		content: '';
+		position: absolute;
+		top: -4px;
+		left: -4px;
+		right: -4px;
+		bottom: -4px;
+		border-radius: 50%;
+		background: rgba(59, 130, 246, 0.2);
+		animation: pulse 2s infinite;
+	}
+
+	@keyframes pulse {
+		0% { transform: scale(1); opacity: 1; }
+		100% { transform: scale(2.5); opacity: 0; }
 	}
 </style>
