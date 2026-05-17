@@ -199,9 +199,10 @@
 				btnRow.style.cssText = 'display:flex;gap:0.4rem;margin-top:0.5rem;';
 
 				const confBtn = document.createElement('button');
-				confBtn.innerText = loc.confirmed ? 'Unmark' : 'Confirm';
+				const isCurrentlyConfirmed = modifiedLocations[loc.id]?.confirmed ?? loc.confirmed;
+				confBtn.innerText = isCurrentlyConfirmed ? 'Unmark' : 'Confirm';
 				confBtn.style.cssText = 'font-size:0.6rem;padding:0.2rem 0.4rem;cursor:pointer;background:#2a5a3a;color:#fff;border:none;border-radius:2px;';
-				confBtn.onclick = () => { updateLocationStatus(loc.id, !loc.confirmed); marker.closePopup(); };
+				confBtn.onclick = () => { updateLocationStatus(loc.id, !isCurrentlyConfirmed); marker.closePopup(); };
 				
 				const noteBtn = document.createElement('button');
 				noteBtn.innerText = 'Edit Notes';
