@@ -10,6 +10,7 @@
 		nearestNeighbor,
 		twoOpt,
 		bruteForce,
+		clearBfCache,
 		theme,
 		THEMES,
 		TRAFFIC_SIGNALS,
@@ -38,6 +39,11 @@
 		...addedLocations
 	]);
 
+	// Clear cache when locations change
+	$effect(() => {
+		if (effectiveLocations.length) clearBfCache();
+	});
+
 	let map: L.Map | null = $state(null);
 	let tileLayer: L.TileLayer | null = $state(null);
 	let routeLayer: L.Polyline | null = $state(null);
@@ -60,6 +66,8 @@
 	let algoPopped = $state(false);
 	let showLegal = $state(false);
 	let animating = $state(false);
+	let animateAlgorithm = $state(false);
+	let currentStep = $state(0);
 	let currentTheme = $state<ThemeName>('dark');
 
 	// Evidence viewer
@@ -289,6 +297,8 @@
 		}
 	};
 
+	let stepMarkers: L.CircleMarker[] = [];
+
 	function solve() {
 		let result: SolverResult;
 		switch (selectedAlgorithm) {
@@ -297,7 +307,15 @@
 			default: result = nearestNeighbor(matrix, startIdx); break;
 		}
 		solverResult = result;
-		drawRoute(result.route);
+		
+		if (animateAlgorithm) {
+			animating = false;
+			animateAlgorithmSteps();
+		} else {
+			stepMarkers.forEach(m => map?.removeLayer(m));
+			stepMarkers = [];
+			drawRoute(result.route);
+		}
 		updateMarkerStyles();
 	}
 
@@ -307,7 +325,10 @@
 		const t = tokens();
 		const coords = route.map((idx) => effectiveLocations[idx].coords as [number, number]);
 		coords.push(effectiveLocations[route[0]].coords);
-		if (animating) { animateRoute(coords, t); }
+		if (animating) { 
+			animateAlgorithm = false;
+			animateRoute(coords, t); 
+		}
 		else { routeLayer = L.polyline(coords, { color: t.text, weight: 1.5, opacity: 0.5, dashArray: '6, 6' }).addTo(map); }
 	}
 
@@ -321,7 +342,13 @@
 		const stepDelay = 200; // ms between steps
 
 		function step(timestamp: number) {
-			if (timestamp - lastTime < stepDelay) {
+			if (!animating) return;
+			if (lastTime && timestamp - lastTime < stepDelay) {
+				requestAnimationFrame(step);
+				return;
+			}
+			if (!lastTime) {
+				lastTime = timestamp;
 				requestAnimationFrame(step);
 				return;
 			}
@@ -332,6 +359,90 @@
 			routeLayer!.setLatLngs([...drawn]);
 			requestAnimationFrame(step);
 		}
+		requestAnimationFrame(step);
+	}
+
+	function animateAlgorithmSteps() {
+		if (!map || !solverResult) return;
+		animateAlgorithm = true;
+		currentStep = 0;
+		
+		const route = solverResult.route;
+		const coords = route.map((idx) => effectiveLocations[idx].coords as [number, number]);
+		const drawn: [number, number][] = [coords[0]];
+		
+		// Clear existing route and markers
+		if (routeLayer) map.removeLayer(routeLayer);
+		stepMarkers.forEach(m => map!.removeLayer(m));
+		stepMarkers = [];
+		
+		const t = tokens();
+		routeLayer = L.polyline(drawn, { color: t.accent, weight: 3, opacity: 0.8 }).addTo(map);
+		
+		const startMarker = L.circleMarker(coords[0], {
+			radius: 10,
+			fillColor: t.accent,
+			color: '#fff',
+			weight: 2,
+			fillOpacity: 1
+		}).addTo(map);
+		stepMarkers.push(startMarker);
+		
+		let stepIndex = 0;
+		const stepDelay = 500; // ms between steps
+		let lastTime = 0;
+		
+		function step(timestamp: number) {
+			if (!animateAlgorithm) {
+				stepMarkers.forEach(m => map!.removeLayer(m));
+				stepMarkers = [];
+				return;
+			}
+			
+			if (lastTime && timestamp - lastTime < stepDelay) {
+				requestAnimationFrame(step);
+				return;
+			}
+
+			if (!lastTime) {
+				lastTime = timestamp;
+				requestAnimationFrame(step);
+				return;
+			}
+			
+			lastTime = timestamp;
+			stepIndex++;
+			currentStep = stepIndex;
+			
+			if (stepIndex >= coords.length) {
+				animateAlgorithm = false;
+				currentStep = 0;
+				// Close the loop
+				drawn.push(coords[0]);
+				routeLayer!.setLatLngs([...drawn]);
+				// Remove step markers
+				stepMarkers.forEach(m => map!.removeLayer(m));
+				stepMarkers = [];
+				return;
+			}
+			
+			// Add next point to route
+			drawn.push(coords[stepIndex]);
+			routeLayer!.setLatLngs([...drawn]);
+			
+			// Add marker for current step
+			const marker = L.circleMarker(coords[stepIndex], {
+				radius: 8,
+				fillColor: t.accent,
+				color: '#fff',
+				weight: 2,
+				fillOpacity: 1
+			}).addTo(map);
+			stepMarkers.push(marker);
+			
+			requestAnimationFrame(step);
+		}
+		
 		requestAnimationFrame(step);
 	}
 
@@ -508,6 +619,29 @@
 		return out;
 	}
 
+	function isLineActive(algo: string, step: number, maxSteps: number, lineIndex: number): boolean {
+		if (!animateAlgorithm) return false;
+		
+		const isInit = step === 0;
+		const isLoop = step > 0 && step < maxSteps;
+		const isDone = step >= maxSteps;
+
+		if (algo === 'nearest') {
+			if (isInit) return lineIndex >= 1 && lineIndex <= 3; // visited <- {s}, route <- [s], cur <- s
+			if (isLoop) return lineIndex >= 5 && lineIndex <= 9; // while loop block
+			if (isDone) return lineIndex === 11; // return route
+		} else if (algo === '2opt') {
+			if (isInit) return lineIndex === 1; // improved <- true
+			if (isLoop) return lineIndex >= 3 && lineIndex <= 10; // while loop block
+			if (isDone) return lineIndex === 12; // return route
+		} else if (algo === 'brute') {
+			if (isInit) return lineIndex >= 1 && lineIndex <= 2; // best <- inf, bestR <- null
+			if (isLoop) return lineIndex >= 4 && lineIndex <= 9; // for loop block
+			if (isDone) return lineIndex === 11; // return bestR
+		}
+		return false;
+	}
+
 	onMount(async () => {
 		loadFromStorage();
 		const L = await import('leaflet');
@@ -570,7 +704,10 @@
 					{/each}
 				</div>
 				<div class="actions">
-					<button class="action-btn" onclick={() => { animating = true; solve(); }}>Animate</button>
+					<button class="action-btn" onclick={() => { animating = true; solve(); }}>Animate Route</button>
+					<button class="action-btn" onclick={() => { animateAlgorithm = !animateAlgorithm; solve(); }} class:active={animateAlgorithm}>
+						{animateAlgorithm ? 'Stop Animation' : 'Animate Algorithm'}
+					</button>
 				</div>
 			</section>
 
@@ -581,14 +718,36 @@
 							<h3 class="algo-inline-title">{ALGORITHM_INFO[selectedAlgorithm].name}</h3>
 							<span class="algo-inline-complexity">{ALGORITHM_INFO[selectedAlgorithm].complexity}</span>
 						</div>
-						<button class="float-btn" onclick={() => (algoPopped = true)} title="Pop out over map">↗</button>
+						<div class="algo-header-actions">
+							<button class="float-btn" onclick={() => (algoPopped = true)} title="Pop out over map">↗</button>
+						</div>
 					</div>
 					<p class="algo-description">{ALGORITHM_INFO[selectedAlgorithm].description}</p>
+					
+					<!-- Algorithm animation controls -->
+					<div class="algo-animation-controls">
+						<button class="action-btn" onclick={() => { animateAlgorithm = !animateAlgorithm; solve(); }} class:active={animateAlgorithm}>
+							{animateAlgorithm ? 'Stop Animation' : 'Animate Algorithm'}
+						</button>
+					</div>
+					
+					<!-- Pseudocode with step highlighting -->
 					<div class="pseudocode">
 						{#each ALGORITHM_INFO[selectedAlgorithm].pseudocode as line, i}
-							<div class="code-line"><span class="line-num">{i + 1}</span><span class="line-content">{@html highlightLine(line)}</span></div>
+							<div class="code-line" class:highlighted={isLineActive(selectedAlgorithm, currentStep, effectiveLocations.length, i)}>
+								<span class="line-num">{i + 1}</span>
+								<span class="line-content">{@html highlightLine(line)}</span>
+							</div>
 						{/each}
 					</div>
+					
+					<!-- Current step info -->
+					{#if animateAlgorithm}
+						<div class="algo-step-info">
+							<span class="step-label">Current Step:</span>
+							<span class="step-value">{currentStep + 1} / {effectiveLocations.length}</span>
+						</div>
+					{/if}
 				</section>
 			{/if}
 
@@ -620,6 +779,24 @@
 						{/each}
 					</ol>
 					<div class="route-return">Return to {effectiveLocations[startIdx].name}</div>
+				</section>
+			{/if}
+
+			<!-- Algorithm animation (mobile) -->
+			{#if !algoPopped}
+				<section class="mobile-section">
+					<h3>Algorithm Steps</h3>
+					<div class="algo-animation-controls">
+						<button class="action-btn" onclick={() => { animateAlgorithm = !animateAlgorithm; solve(); }} class:active={animateAlgorithm}>
+							{animateAlgorithm ? 'Stop Animation' : 'Animate Algorithm'}
+						</button>
+					</div>
+					{#if animateAlgorithm}
+						<div class="algo-step-info">
+							<span class="step-label">Current Step:</span>
+							<span class="step-value">{currentStep + 1} / {effectiveLocations.length}</span>
+						</div>
+					{/if}
 				</section>
 			{/if}
 
@@ -717,8 +894,11 @@
 			<button class="fab" onclick={cycleTheme} title="Theme">
 				{currentTheme === 'dark' ? '●' : currentTheme === 'cambridge' ? '◐' : '○'}
 			</button>
-			<button class="fab" onclick={() => { animating = true; solve(); }} title="Solve & Animate">
+			<button class="fab" onclick={() => { animating = true; solve(); }} title="Animate Route">
 				▶
+			</button>
+			<button class="fab" class:active={animateAlgorithm} onclick={() => { animateAlgorithm = !animateAlgorithm; solve(); }} title="Animate Algorithm">
+				⚡
 			</button>
 			<button class="fab" onclick={() => (showAlgorithm = !showAlgorithm)} title="Algorithm">
 				λ
@@ -854,9 +1034,14 @@
 
 		<!-- Algorithm panel (popped out over map, desktop only) -->
 		{#if algoPopped}
-			<div class="algo-panel desktop-only" role="dialog" aria-label="Algorithm details">
-				<div class="algo-panel-header">
-					<div class="algo-panel-tabs">
+			<div 
+				class="algo-panel desktop-only" 
+				style="left: {floatX}px; top: {floatY}px; right: auto; bottom: auto;"
+				role="dialog" 
+				aria-label="Algorithm details"
+			>
+				<div class="algo-panel-header" onmousedown={onDragStart} style="cursor: grab;">
+					<div class="algo-panel-tabs" onmousedown={(e) => e.stopPropagation()}>
 						{#each [{ value: 'nearest', label: 'Nearest Neighbor' }, { value: '2opt', label: '2-Opt' }, { value: 'brute', label: 'Brute Force' }] as algo}
 							<button
 								class="algo-panel-tab"
@@ -878,7 +1063,7 @@
 					<p class="algo-panel-desc">{ALGORITHM_INFO[selectedAlgorithm].description}</p>
 					<div class="algo-panel-code">
 						{#each ALGORITHM_INFO[selectedAlgorithm].pseudocode as line, i}
-							<div class="code-line"><span class="line-num">{i + 1}</span><span class="line-content">{@html highlightLine(line)}</span></div>
+							<div class="code-line" class:highlighted={isLineActive(selectedAlgorithm, currentStep, effectiveLocations.length, i)}><span class="line-num">{i + 1}</span><span class="line-content">{@html highlightLine(line)}</span></div>
 						{/each}
 					</div>
 				</div>
@@ -910,7 +1095,7 @@
 					<p class="algo-panel-desc">{ALGORITHM_INFO[selectedAlgorithm].description}</p>
 					<div class="algo-panel-code">
 						{#each ALGORITHM_INFO[selectedAlgorithm].pseudocode as line, i}
-							<div class="code-line"><span class="line-num">{i + 1}</span><span class="line-content">{@html highlightLine(line)}</span></div>
+							<div class="code-line" class:highlighted={isLineActive(selectedAlgorithm, currentStep, effectiveLocations.length, i)}><span class="line-num">{i + 1}</span><span class="line-content">{@html highlightLine(line)}</span></div>
 						{/each}
 					</div>
 				</div>
@@ -1216,13 +1401,27 @@
 
 	/* Pseudocode */
 	.pseudocode { padding: 1.25rem; border-top: none; overflow-x: auto; max-width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
-	.code-line { display: flex; align-items: baseline; gap: 0.75rem; line-height: 2; }
+	.code-line { display: flex; align-items: baseline; gap: 0.75rem; line-height: 2; transition: background 0.2s, border-left 0.2s; border-left: 2px solid transparent; }
+	.code-line.highlighted { 
+		background: color-mix(in srgb, var(--accent) 25%, transparent); 
+		border-left-color: var(--accent);
+	}
+	.code-line.highlighted .line-content {
+		color: var(--text);
+		font-weight: 500;
+	}
 	.line-num { width: 1.2rem; min-width: 1.2rem; text-align: right; font-size: 0.62rem; color: var(--code-line-num); font-family: 'SF Mono', 'Fira Code', monospace; flex-shrink: 0; user-select: none; }
-	.line-content { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.74rem; color: var(--code-text); white-space: pre; }
+	.line-content { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.74rem; color: var(--code-text); white-space: pre; transition: color 0.2s; }
 	:global(.code-line .kw) { color: var(--code-kw); font-weight: 500; }
 	:global(.code-line .op) { color: var(--code-op); }
 	:global(.code-line .sym) { color: var(--code-sym); font-style: italic; }
 	:global(.code-line .fn) { color: var(--code-fn); }
+
+	/* Algorithm animation controls */
+	.algo-animation-controls { display: flex; justify-content: center; margin: 0.75rem 0; }
+	.algo-step-info { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted); }
+	.step-label { font-weight: 500; }
+	.step-value { font-family: 'SF Mono', 'Fira Code', monospace; color: var(--accent); }
 
 	/* Stats & route */
 	.stats { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 1rem; }

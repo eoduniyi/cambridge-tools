@@ -16,20 +16,30 @@ export interface SolverResult {
 }
 
 // Cache brute force results by startIdx to avoid recomputing 40M permutations
-const bfCache = new Map<number, SolverResult>();
+const bfCache = new Map<string, SolverResult>();
+
+export function clearBfCache() {
+  bfCache.clear();
+}
 
 /**
  * Brute force: try all permutations. O(n!).
- * Results are cached per startIdx since the optimal cycle is the same
- * regardless of start (just rotated), but we cache the specific representation.
+ * Results are cached per startIdx and matrix size.
  */
 export function bruteForce(
   matrix: number[][],
   startIdx: number = 0,
 ): SolverResult {
-  if (bfCache.has(startIdx)) return bfCache.get(startIdx)!;
-
   const n = matrix.length;
+  const cacheKey = `${startIdx}-${n}`;
+  if (bfCache.has(cacheKey)) return bfCache.get(cacheKey)!;
+
+  // Safeguard: don't attempt brute force for n > 12
+  if (n > 12) {
+    console.warn("TSP Brute Force: n > 12 is too slow. Falling back to Nearest Neighbor.");
+    return nearestNeighbor(matrix, startIdx);
+  }
+
   const rest: number[] = [];
   for (let i = 0; i < n; i++) {
     if (i !== startIdx) rest.push(i);

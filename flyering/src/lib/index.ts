@@ -11,6 +11,7 @@ export {
   bruteForce,
   nearestNeighbor,
   twoOpt,
+  clearBfCache,
   type SolverResult,
 } from "./solver/tsp";
 export {
