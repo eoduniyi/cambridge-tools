@@ -24,11 +24,11 @@
 
 \title{The Traveling Flyerperson: A Concrete Exploration of Community, Computing, and Statistics in Cambridge, MA}
 
-\author{}
-\affiliation{}
-\email{}
+\author{Cambridge Developers}
+\affiliation{\country{USA}}
+% \email{contact@cambridge-dev.org}
 
-\renewcommand{\shortauthors}{}
+\renewcommand{\shortauthors}{Cambridge Developers}
 
 \begin{abstract}
 We present \emph{The Traveling Flyerperson}, a project that begins with a mundane civic question---where should a small software collective place paper flyers in Cambridge, Massachusetts---and treats it as a substrate for serious work in algorithms, statistics, and community-scale computing. The deployed web application solves a Traveling Salesman Problem (TSP) over curated Cambridge locations using Nearest Neighbor, 2-Opt, and Brute Force solvers, exposes algorithm execution as a step-by-step debuggable visualization, and integrates OpenStreetMap-derived covariates (traffic signals, bulletin boards, transit) alongside an EXIF-grounded evidence registry of placed flyers. We then formalize the placement problem as a \emph{predictive estimation problem}: given a candidate location $L$, what is the expected conversion value of a flyer over its lifetime? We develop a unified framework that combines (i) interval-censored survival analysis via the Turnbull non-parametric maximum likelihood estimator (NPMLE) and Weibull accelerated failure time models for flyer lifespan, (ii) inhomogeneous Poisson point processes with non-stationary thinning to model legal and institutional removal dynamics, (iii) Gaussian-process Multi-Armed Bandits (GP-UCB, contextual GP-UCB, and HyperPrior Thompson Sampling) for sequential allocation, and (iv) a three-level Bayesian hierarchical model that fuses these components into a posterior conversion utility heatmap. The result is a small, defensible, end-to-end pipeline---from photograph to point process---that turns a community task into a tractable, technically rigorous research artifact.
