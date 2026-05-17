@@ -78,6 +78,7 @@
 	let sheetDragging = $state(false);
 	let sheetStartY = 0;
 	let sheetStartState: typeof sheetState = 'peek';
+	let algoMenuOpen = $state(false);
 
 	// Desktop floating panel state
 	let codeFloating = $state(false);
@@ -884,24 +885,32 @@
 		<div id="map"></div>
 
 		<!-- Mobile FABs -->
-		<div class="fab-group mobile-only">
+		<div class="fab-group-top mobile-only">
 			<button class="fab" class:active={watchId !== null} onclick={toggleGeolocation} title="Find Me">
-				{watchId !== null ? '◎' : '⊕'}
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
 			</button>
 			<button class="fab" onclick={addNewSpot} title="Add Spot">
-				+
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 			</button>
 			<button class="fab" onclick={cycleTheme} title="Theme">
-				{currentTheme === 'dark' ? '●' : currentTheme === 'cambridge' ? '◐' : '○'}
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/><circle cx="12" cy="12" r="4"/></svg>
 			</button>
-			<button class="fab" onclick={() => { animating = true; solve(); }} title="Animate Route">
-				▶
-			</button>
-			<button class="fab" class:active={animateAlgorithm} onclick={() => { animateAlgorithm = !animateAlgorithm; solve(); }} title="Animate Algorithm">
-				⚡
-			</button>
-			<button class="fab" onclick={() => (showAlgorithm = !showAlgorithm)} title="Algorithm">
-				λ
+		</div>
+
+		<div class="fab-group-bottom mobile-only" class:expanded={algoMenuOpen}>
+			{#if algoMenuOpen}
+				<button class="fab sub-fab" onclick={() => { animating = true; solve(); algoMenuOpen = false; }} title="Animate Route">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+				</button>
+				<button class="fab sub-fab" class:active={animateAlgorithm} onclick={() => { animateAlgorithm = !animateAlgorithm; solve(); algoMenuOpen = false; }} title="Animate Algorithm">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-2 10h8l-2 10"/></svg>
+				</button>
+				<button class="fab sub-fab" onclick={() => { showAlgorithm = true; algoMenuOpen = false; }} title="Algorithm Info">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 8-5 4 5 4"/><path d="m17 8 5 4-5 4"/><line x1="16" y1="4" x2="8" y2="20"/></svg>
+				</button>
+			{/if}
+			<button class="fab main-fab" class:active={algoMenuOpen} onclick={() => (algoMenuOpen = !algoMenuOpen)} title="Algorithm Menu">
+				<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate({algoMenuOpen ? '45deg' : '0'}); transition: transform 0.2s;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 			</button>
 		</div>
 
@@ -1663,34 +1672,68 @@
 	.legend-dot.dim { background: var(--text-dim); }
 
 	/* ===== Mobile: FABs ===== */
-	.fab-group {
+	.fab-group-top {
 		position: absolute;
 		top: 1rem;
 		right: 1rem;
+		display: flex;
 		flex-direction: column;
 		gap: 0.6rem;
 		z-index: 100;
 	}
 
+	.fab-group-bottom {
+		position: absolute;
+		bottom: 11rem; /* Above peek state */
+		right: 1rem;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.6rem;
+		z-index: 100;
+		transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	/* Adjust bottom FABs based on sheet state */
+	:global(.sheet.collapsed) ~ .fab-group-bottom { bottom: 3rem; }
+	:global(.sheet.peek) ~ .fab-group-bottom { bottom: 11rem; }
+	:global(.sheet.full) ~ .fab-group-bottom { bottom: 76vh; }
+
 	.fab {
-		width: 2.75rem;
-		height: 2.75rem;
+		width: 3rem;
+		height: 3rem;
 		border-radius: 50%;
-		background: var(--bg);
+		background: var(--bg-panel);
 		border: 1px solid var(--border);
 		color: var(--text);
-		font-size: 1rem;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
 		box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-		transition: all 0.15s;
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		padding: 0;
 	}
 
-	.fab:active {
-		transform: scale(0.92);
+	.fab:active { transform: scale(0.92); }
+	.fab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+	.sub-fab {
+		width: 2.6rem;
+		height: 2.6rem;
+		animation: fab-pop 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+		opacity: 0;
+		transform: translateY(10px);
 	}
+
+	@keyframes fab-pop {
+		to { opacity: 1; transform: translateY(0); }
+	}
+
+	/* Stagger sub-fabs */
+	.sub-fab:nth-child(1) { animation-delay: 0.05s; }
+	.sub-fab:nth-child(2) { animation-delay: 0.1s; }
+	.sub-fab:nth-child(3) { animation-delay: 0.15s; }
 
 	/* ===== Mobile: Bottom Sheet ===== */
 	.sheet {
