@@ -2,11 +2,16 @@
   "hosting": {
     "target": "letters-cambridge",
     "public": "build",
+    "cleanUrls": true,
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
-        "source": "/stories/flyering/**",
-        "destination": "/stories/flyering/index.html"
+        "source": "/stories/flyering/intro",
+        "destination": "/stories/flyering/intro.html"
+      },
+      {
+        "source": "/stories/flyering/intro/**",
+        "destination": "/stories/flyering/intro.html"
       }
     ],
     "headers": [

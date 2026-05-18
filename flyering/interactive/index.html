@@ -1,0 +1,1152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Traveling Flyerperson — An Introduction</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0a0a0a;
+        --bg-panel: #0a0a0a;
+        --bg-card: #0f0f0f;
+        --border: #1a1a1a;
+        --border-subtle: #111;
+        --text: #e8e8e8;
+        --text-muted: #888;
+        --text-dim: #555;
+        --accent: #e8e8e8;
+        --bg-figure: #0f0f0f;
+        --note-bg: #111;
+        --note-border: #222;
+        --font-body:
+          "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+        --font-mono: "SF Mono", "Fira Code", Menlo, monospace;
+        --font-sans:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+          sans-serif;
+        --max-width: 740px;
+      }
+
+      html {
+        font-size: 16px;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body {
+        font-family: var(--font-body);
+        color: var(--text);
+        background: var(--bg);
+        line-height: 1.72;
+        padding: 0 1.25rem;
+        text-align: justify;
+        text-justify: inter-word;
+        hyphens: auto;
+        transition:
+          background 0.3s,
+          color 0.3s;
+      }
+
+      article {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 3rem 0 5rem;
+      }
+
+      h1 {
+        font-size: 2.1rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 0.3rem;
+        letter-spacing: -0.02em;
+      }
+      h2 {
+        font-size: 1.35rem;
+        font-weight: 600;
+        margin-top: 2.8rem;
+        margin-bottom: 0.8rem;
+      }
+      h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-top: 2rem;
+        margin-bottom: 0.5rem;
+      }
+      p {
+        margin-bottom: 1.1rem;
+      }
+
+      .subtitle {
+        font-family: var(--font-sans);
+        font-size: 0.92rem;
+        color: var(--text-muted);
+        margin-bottom: 0.15rem;
+        line-height: 1.5;
+      }
+      .byline {
+        font-family: var(--font-sans);
+        font-size: 0.82rem;
+        color: var(--text-dim);
+        margin-bottom: 2.5rem;
+      }
+      .byline a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      .byline a:hover {
+        text-decoration: underline;
+      }
+      a {
+        color: var(--accent);
+      }
+
+      .math {
+        font-family:
+          "Latin Modern Math", "STIX Two Math", "Cambria Math", Georgia, serif;
+        font-style: normal;
+      }
+      .math-block {
+        display: block;
+        text-align: center;
+        margin: 1.8rem 0;
+        font-size: 1.15rem;
+        font-family:
+          "Latin Modern Math", "STIX Two Math", "Cambria Math", Georgia, serif;
+        font-style: normal;
+        line-height: 2.2;
+      }
+
+      .frac {
+        display: inline-block;
+        text-align: center;
+        vertical-align: middle;
+        margin: 0 0.15em;
+      }
+      .frac .num,
+      .frac .den {
+        display: block;
+        padding: 0 0.2em;
+      }
+      .frac .num {
+        border-bottom: 1px solid currentColor;
+        margin-bottom: 0.1em;
+      }
+      .frac .den {
+        margin-top: 0.1em;
+      }
+
+      .display-op {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        vertical-align: middle;
+        line-height: 1;
+        margin: 0 0.2em;
+      }
+      .display-op .op-sym {
+        font-size: 1.4em;
+        line-height: 1;
+      }
+      .display-op .op-sup,
+      .display-op .op-sub {
+        font-size: 0.6em;
+        font-style: normal;
+        line-height: 1.3;
+      }
+
+      sub,
+      sup {
+        font-size: 0.7em;
+        position: relative;
+        vertical-align: baseline;
+      }
+      sub {
+        top: 0.3em;
+      }
+      sup {
+        top: -0.3em;
+      }
+
+      figure {
+        margin: 2rem 0;
+        background: var(--bg-figure);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        overflow: hidden;
+        transition:
+          background 0.3s,
+          border-color 0.3s;
+      }
+      figure .vis-container {
+        padding: 1.5rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+      }
+      figcaption {
+        font-family: var(--font-sans);
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        padding: 0.75rem 1.25rem;
+        border-top: 1px solid var(--border);
+        line-height: 1.5;
+      }
+      figcaption strong {
+        color: var(--text);
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.2rem;
+        align-items: center;
+        margin-top: 1rem;
+        font-family: var(--font-sans);
+        font-size: 0.82rem;
+        color: var(--text-muted);
+      }
+      .control-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .control-group label {
+        white-space: nowrap;
+      }
+
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 120px;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        outline: none;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+      }
+
+      .value-display {
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        min-width: 2.5rem;
+        text-align: right;
+      }
+
+      button {
+        font-family: var(--font-sans);
+        font-size: 0.8rem;
+        padding: 0.35rem 0.9rem;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--bg);
+        color: var(--text);
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+      }
+      button:hover {
+        border-color: var(--accent);
+      }
+
+      .note {
+        font-family: var(--font-sans);
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        border-left: 3px solid var(--note-border);
+        padding: 0.6rem 1rem;
+        margin: 1.5rem 0;
+        background: var(--note-bg);
+        border-radius: 0 4px 4px 0;
+        line-height: 1.55;
+      }
+
+      canvas {
+        display: block;
+      }
+
+      .theme-picker {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 100;
+        font-family: var(--font-sans);
+        font-size: 0.78rem;
+        display: flex;
+        gap: 0.4rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 0.3rem 0.5rem;
+        transition:
+          background 0.3s,
+          border-color 0.3s;
+      }
+      .theme-picker button {
+        border: none;
+        background: none;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 0.75rem;
+        transition: all 0.2s;
+      }
+      .theme-picker button.active {
+        background: var(--accent);
+        color: var(--bg);
+      }
+      .theme-picker button:hover:not(.active) {
+        color: var(--text);
+      }
+
+      ul,
+      ol {
+        margin: 0.5rem 0 1.1rem 1.5rem;
+      }
+      li {
+        margin-bottom: 0.4rem;
+      }
+
+      @media (max-width: 600px) {
+        h1 {
+          font-size: 1.6rem;
+        }
+        .controls {
+          gap: 0.8rem;
+        }
+        input[type="range"] {
+          width: 90px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="theme-picker">
+      <button id="theme-dark" class="active">● dark</button>
+      <button id="theme-cambridge">◐ cambridge</button>
+      <button id="theme-light">○ light</button>
+    </div>
+
+    <article>
+      <h1>The Traveling Flyerperson</h1>
+      <p class="subtitle">
+        An interactive introduction to route optimization in Cambridge, MA
+      </p>
+      <p class="byline">
+        <a href="https://www.cambridge-dev.org/">cambridge-dev</a> · May 2026
+      </p>
+
+      <figure>
+        <img
+          src="https://storage.googleapis.com/blessa/letters/cambridge/PXL_20260517_124102921.MP.jpg"
+          alt="Cambridge street with flyers"
+          style="
+            width: 100%;
+            max-width: 740px;
+            height: auto;
+            border-radius: 6px;
+          "
+        />
+        <figcaption
+          style="
+            font-family: var(--font-sans);
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            padding: 0.75rem 1.25rem;
+            border-top: 1px solid var(--border);
+            line-height: 1.5;
+          "
+        >
+          <strong>Figure 0.</strong> A flyer posted on a Bishop Allen Dr,
+          Cambridge. May 2026.
+        </figcaption>
+      </figure>
+
+      <h2 id="problem">The Problem</h2>
+
+      <p>
+        You have a set of flyers for a local software group. You live in
+        Cambridge, Massachusetts. 6.4 square miles of dense sidewalks, two
+        research universities, and a long tradition of community bulletin
+        boards. You want to post these flyers where people will actually see
+        them, and you want to walk an efficient route to do it.
+      </p>
+
+      <p>
+        The question <em>where should I place these flyers?</em>
+        opens floodgates to combinatorial optimization, survival analysis, and
+        sequential decision-making. This article walks through the first door:
+        the routing problem.
+      </p>
+
+      <h2 id="tsp">Routing as a Traveling Salesman Problem</h2>
+
+      <p>
+        Given <span class="math">n</span> locations to visit, starting and
+        ending at the Cambridge Public Library, what's the shortest route? This
+        is the <strong>Traveling Salesman Problem</strong> (TSP), one of the
+        most studied problems in combinatorial optimization.
+      </p>
+
+      <p>
+        A tour is a permutation <span class="math">&pi;</span> of the locations
+        with total cost:
+      </p>
+
+      <div class="math-block">
+        C(&pi;) =
+        <span class="display-op"
+          ><span class="op-sup">n&minus;1</span><span class="op-sym">&sum;</span
+          ><span class="op-sub">i=1</span></span
+        >
+        d(&pi;<sub>i</sub>, &pi;<sub>i+1</sub>) + d(&pi;<sub>n</sub>,
+        &pi;<sub>1</sub>)
+      </div>
+
+      <p>
+        We want the permutation that minimizes this cost. For our ~10 locations,
+        three algorithmic strategies illustrate the tradeoffs:
+      </p>
+
+      <h3>Brute Force</h3>
+      <p>
+        Try every possible ordering. There are
+        <span class="math">(n&minus;1)!/2</span> distinct tours. For 10
+        locations that's ~181,000 tours. Feasible, but the approach collapses
+        for larger inputs. This gives the <em>exact</em> optimal solution.
+      </p>
+
+      <h3>Nearest Neighbor</h3>
+      <p>
+        A greedy heuristic: from your current location, always go to the closest
+        unvisited stop. Fast (<span class="math">O(n&sup2;)</span>) but often
+        produces routes 20 to 30 percent longer than optimal because it doesn't
+        plan ahead.
+      </p>
+
+      <h3>2-Opt</h3>
+      <p>
+        Start with the Nearest Neighbor solution, then iteratively improve: pick
+        two edges, reverse the segment between them, keep the change if it
+        shortens the route. This is a <em>local search</em> method. No global
+        guarantee, but in practice it gets close.
+      </p>
+
+      <div class="note">
+        The simulation below lets you watch all three algorithms work on the
+        same set of Cambridge locations. Drag the speed slider to slow down
+        execution and observe how each strategy builds its tour.
+      </div>
+
+      <figure>
+        <div class="vis-container">
+          <canvas id="tspCanvas" width="520" height="520"></canvas>
+          <div class="controls">
+            <div class="control-group">
+              <label>Algorithm</label>
+              <select
+                id="algoSelect"
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 0.8rem;
+                  padding: 0.3rem 0.5rem;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  background: var(--bg);
+                  color: var(--text);
+                "
+              >
+                <option value="nearest">Nearest Neighbor</option>
+                <option value="2opt">2-Opt</option>
+                <option value="brute">Brute Force</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label>Speed</label>
+              <input
+                type="range"
+                id="speedSlider"
+                min="1"
+                max="60"
+                step="1"
+                value="30"
+              />
+              <span class="value-display" id="speedValue">30</span>
+            </div>
+            <div class="control-group">
+              <button id="runBtn">Run</button>
+              <button id="resetTspBtn">Reset</button>
+            </div>
+          </div>
+        </div>
+        <figcaption>
+          <strong>Figure 1.</strong> TSP solver visualization over Cambridge
+          flyering locations. Each dot is a real location; the library (start)
+          is highlighted. Watch the algorithm build its tour step by step.
+        </figcaption>
+      </figure>
+
+      <h2 id="constraints">The Constraints</h2>
+
+      <p>
+        Cambridge isn't a blank grid. Massachusetts law prohibits posting on
+        public utility poles, lamp posts, shade trees, and public buildings. A
+        $300 fine per violation. This eliminates the most visible,
+        highest-traffic locations.
+      </p>
+
+      <p>
+        Even on private property, most locations require permission. Cafes
+        curate their boards. Libraries have posting policies. MIT reserves
+        campus boards for recognized student groups. Business Improvement
+        Districts employ crews that remove unauthorized postings daily.
+      </p>
+
+      <p>
+        The net effect: the set of <em>valid</em> flyering locations is much
+        smaller than the set of <em>visible</em> ones, and survival time varies
+        enormously by location type. A flyer in a quiet laundromat stays up for
+        months. One on a transit shelter lasts hours.
+      </p>
+
+      <h2 id="comparison">Distance Comparison</h2>
+
+      <p>
+        How much does algorithm choice matter? The chart below shows total tour
+        distance for each solver on our Cambridge locations. Nearest Neighbor is
+        fast but suboptimal. 2-Opt closes most of the gap. Brute Force finds the
+        true minimum.
+      </p>
+
+      <figure>
+        <div class="vis-container">
+          <canvas id="comparisonCanvas" width="520" height="240"></canvas>
+        </div>
+        <figcaption>
+          <strong>Figure 2.</strong> Total tour distance (km) by algorithm. The
+          gap between Nearest Neighbor and the optimal solution motivates local
+          search improvements.
+        </figcaption>
+      </figure>
+
+      <h2 id="deeper">Why are We Interested in This?</h2>
+
+      <p>
+        The routing problem is the entry point, but the deeper question is:
+        <em>which locations are actually worth visiting?</em> Route optimization
+        assumes you already know where to go. The harder problem is figuring out
+        where to go in the first place.
+      </p>
+
+      <p>
+        This leads to questions about <strong>survival</strong> how long does a
+        flyer last, <strong>exposure</strong> how many people engage with a
+        board, and <strong>learning</strong> how do you estimate value for
+        locations you've never tried. These are the subjects of the companion
+        paper, which develops a Bayesian hierarchical framework combining
+        survival analysis, spatial point processes, and multi-armed bandits.
+      </p>
+
+      <h2 id="app">Try the App</h2>
+
+      <p>
+        The full interactive application lets you run all three solvers on a
+        live map of Cambridge, step through algorithm execution with pseudocode
+        highlighting, toggle OpenStreetMap layers, and browse the evidence
+        registry of placed flyers.
+      </p>
+
+      <p style="text-align: center; margin: 2rem 0">
+        <a
+          href="/stories/flyering/"
+          style="
+            display: inline-block;
+            padding: 0.7rem 1.8rem;
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            text-decoration: none;
+            color: var(--accent);
+            font-family: var(--font-sans);
+            font-size: 0.9rem;
+            transition: all 0.2s;
+          "
+          >Launch the Traveling Flyerperson App</a
+        >
+      </p>
+
+      <h2 id="research">Preview Research</h2>
+
+      <p>
+        Route optimization is only the first layer. The deeper question
+        <em>which locations are worth visiting</em> requires estimating the
+        expected value of placing a flyer at each candidate site. This gets
+        involved:
+      </p>
+
+      <ul>
+        <li>
+          <strong>Survival analysis</strong> How long does a flyer last before
+          removal. We use interval-censored observations via the Turnbull NPMLE
+          and Weibull AFT models.
+        </li>
+        <li>
+          <strong>Spatial point processes</strong> Inhomogeneous Poisson
+          processes with non-stationary thinning to model legal and
+          institutional removal dynamics across Cambridge.
+        </li>
+        <li>
+          <strong>Multi-armed bandits</strong> Gaussian-process UCB and Thompson
+          Sampling for sequential allocation of flyers to boards with spatial
+          correlation.
+        </li>
+        <li>
+          <strong>Bayesian hierarchical model</strong> A three-level model
+          fusing survival, exposure, and spatial effects into a posterior
+          conversion utility heatmap.
+        </li>
+      </ul>
+
+      <div class="note">
+        The mathematical framework is documented in a companion paper. Every
+        photograph collected on a bike ride is an interval-censored observation.
+        Over time, the empirical posterior sharpens, the bandit explores beyond
+        the seed set, and the city itself becomes the experiment.
+      </div>
+
+      <h2 id="status">Current Status</h2>
+
+      <ul>
+        <li>10 curated flyering locations across Cambridge</li>
+        <li>13 flyers placed and photographed</li>
+        <li>~60 flyers estimated in circulation city-wide</li>
+        <li>Three working solvers with step-by-step animation</li>
+        <li>A documented mathematical framework awaiting more observations</li>
+      </ul>
+
+      <p>
+        The project is intentionally small. It's a real task done by a real
+        group, held to a standard of rigor that makes it useful as both a civic
+        tool and a teaching artifact.
+      </p>
+
+      <p
+        class="byline"
+        style="
+          margin-top: 2.5rem;
+          border-top: 1px solid var(--border);
+          padding-top: 1.5rem;
+        "
+      >
+        <a href="/stories/flyering/">Launch the app</a>
+        <a href="https://www.cambridge-dev.org/">cambridge-dev.org</a>
+      </p>
+    </article>
+
+    <script>
+      // ═══════════════════════════════════════════════════════════════
+      // Theme System — matches flyering app's three themes
+      // ═══════════════════════════════════════════════════════════════
+      const THEMES = {
+        dark: {
+          bg: "#0a0a0a",
+          bgPanel: "#0a0a0a",
+          bgCard: "#0f0f0f",
+          border: "#1a1a1a",
+          borderSubtle: "#111",
+          text: "#e8e8e8",
+          textMuted: "#888",
+          textDim: "#555",
+          accent: "#e8e8e8",
+          bgFigure: "#0f0f0f",
+          noteBg: "#111",
+          noteBorder: "#222",
+        },
+        cambridge: {
+          bg: "#fafafa",
+          bgPanel: "#ffffff",
+          bgCard: "#f5f5f0",
+          border: "#e0e0d8",
+          borderSubtle: "#eee",
+          text: "#1a1a1a",
+          textMuted: "#555",
+          textDim: "#888",
+          accent: "#2a5a3a",
+          bgFigure: "#f5f5f0",
+          noteBg: "#f0f5f0",
+          noteBorder: "#2a5a3a",
+        },
+        light: {
+          bg: "#ffffff",
+          bgPanel: "#ffffff",
+          bgCard: "#f8f8f8",
+          border: "#e5e5e5",
+          borderSubtle: "#f0f0f0",
+          text: "#1a1a1a",
+          textMuted: "#666",
+          textDim: "#999",
+          accent: "#1a1a1a",
+          bgFigure: "#f8f8f8",
+          noteBg: "#f5f5f5",
+          noteBorder: "#ddd",
+        },
+      };
+
+      let currentTheme = "dark";
+
+      function applyTheme(name) {
+        currentTheme = name;
+        const t = THEMES[name];
+        const r = document.documentElement.style;
+        r.setProperty("--bg", t.bg);
+        r.setProperty("--bg-panel", t.bgPanel);
+        r.setProperty("--bg-card", t.bgCard);
+        r.setProperty("--border", t.border);
+        r.setProperty("--border-subtle", t.borderSubtle);
+        r.setProperty("--text", t.text);
+        r.setProperty("--text-muted", t.textMuted);
+        r.setProperty("--text-dim", t.textDim);
+        r.setProperty("--accent", t.accent);
+        r.setProperty("--bg-figure", t.bgFigure);
+        r.setProperty("--note-bg", t.noteBg);
+        r.setProperty("--note-border", t.noteBorder);
+        document
+          .querySelectorAll(".theme-picker button")
+          .forEach((b) => b.classList.remove("active"));
+        document.getElementById("theme-" + name).classList.add("active");
+        // Redraw canvases
+        if (typeof drawTSP === "function") drawTSP();
+        if (typeof drawComparison === "function") drawComparison();
+      }
+
+      document
+        .getElementById("theme-dark")
+        .addEventListener("click", () => applyTheme("dark"));
+      document
+        .getElementById("theme-cambridge")
+        .addEventListener("click", () => applyTheme("cambridge"));
+      document
+        .getElementById("theme-light")
+        .addEventListener("click", () => applyTheme("light"));
+    </script>
+
+    <script>
+      // ═══════════════════════════════════════════════════════════════
+      // TSP Simulation
+      // ═══════════════════════════════════════════════════════════════
+      (function () {
+        const canvas = document.getElementById("tspCanvas");
+        const ctx = canvas.getContext("2d");
+        const W = canvas.width,
+          H = canvas.height;
+
+        // Real Cambridge flyering locations (lat, lng) — normalized to canvas
+        const RAW_LOCATIONS = [
+          {
+            name: "Cambridge Public Library",
+            lat: 42.3736,
+            lng: -71.1097,
+            start: true,
+          },
+          { name: "Darwin's Ltd", lat: 42.3726, lng: -71.1189 },
+          { name: "Clover Harvard Sq", lat: 42.3735, lng: -71.1209 },
+          { name: "1369 Coffee House", lat: 42.3656, lng: -71.1035 },
+          { name: "Lamont Library", lat: 42.3725, lng: -71.1152 },
+          { name: "Broadway Bicycle", lat: 42.3633, lng: -71.0943 },
+          { name: "Central Sq Library", lat: 42.3653, lng: -71.1037 },
+          { name: "Toscanini's", lat: 42.365, lng: -71.103 },
+          { name: "Porter Sq Books", lat: 42.3884, lng: -71.1192 },
+          { name: "Diesel Cafe", lat: 42.3966, lng: -71.122 },
+        ];
+
+        // Normalize to canvas coordinates
+        const lats = RAW_LOCATIONS.map((l) => l.lat);
+        const lngs = RAW_LOCATIONS.map((l) => l.lng);
+        const minLat = Math.min(...lats),
+          maxLat = Math.max(...lats);
+        const minLng = Math.min(...lngs),
+          maxLng = Math.max(...lngs);
+        const pad = 60;
+
+        const locations = RAW_LOCATIONS.map((l) => ({
+          ...l,
+          x: pad + ((l.lng - minLng) / (maxLng - minLng || 1)) * (W - 2 * pad),
+          y: pad + ((maxLat - l.lat) / (maxLat - minLat || 1)) * (H - 2 * pad),
+        }));
+
+        // Distance matrix (Haversine km)
+        function haversine(a, b) {
+          const R = 6371;
+          const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+          const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+          const s =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos((a.lat * Math.PI) / 180) *
+              Math.cos((b.lat * Math.PI) / 180) *
+              Math.sin(dLng / 2) ** 2;
+          return 2 * R * Math.asin(Math.sqrt(s));
+        }
+
+        const n = locations.length;
+        const dist = Array.from({ length: n }, (_, i) =>
+          Array.from({ length: n }, (_, j) =>
+            haversine(RAW_LOCATIONS[i], RAW_LOCATIONS[j]),
+          ),
+        );
+
+        // State
+        let tour = [];
+        let animSteps = [];
+        let animIdx = 0;
+        let animRunning = false;
+        let speed = 30;
+        let animTimer = null;
+
+        function tourDist(t) {
+          let d = 0;
+          for (let i = 0; i < t.length - 1; i++) d += dist[t[i]][t[i + 1]];
+          d += dist[t[t.length - 1]][t[0]];
+          return d;
+        }
+
+        // Nearest Neighbor
+        function solveNN() {
+          const steps = [];
+          const visited = new Set([0]);
+          const path = [0];
+          steps.push({ path: [...path], label: "Start at Library" });
+          while (visited.size < n) {
+            const cur = path[path.length - 1];
+            let best = -1,
+              bestD = Infinity;
+            for (let j = 0; j < n; j++) {
+              if (!visited.has(j) && dist[cur][j] < bestD) {
+                best = j;
+                bestD = dist[cur][j];
+              }
+            }
+            visited.add(best);
+            path.push(best);
+            steps.push({
+              path: [...path],
+              label: "Visit " + locations[best].name,
+            });
+          }
+          steps.push({
+            path: [...path, 0],
+            label: "Return to start — " + tourDist(path).toFixed(2) + " km",
+          });
+          return steps;
+        }
+
+        // 2-Opt
+        function solve2Opt() {
+          const steps = [];
+          // Start with NN solution
+          const visited = new Set([0]);
+          const path = [0];
+          while (visited.size < n) {
+            const cur = path[path.length - 1];
+            let best = -1,
+              bestD = Infinity;
+            for (let j = 0; j < n; j++) {
+              if (!visited.has(j) && dist[cur][j] < bestD) {
+                best = j;
+                bestD = dist[cur][j];
+              }
+            }
+            visited.add(best);
+            path.push(best);
+          }
+          steps.push({
+            path: [...path, 0],
+            label: "NN seed — " + tourDist(path).toFixed(2) + " km",
+          });
+
+          let improved = true;
+          let iter = 0;
+          while (improved && iter < 50) {
+            improved = false;
+            for (let i = 1; i < n - 1; i++) {
+              for (let j = i + 1; j < n; j++) {
+                const d1 =
+                  dist[path[i - 1]][path[i]] + dist[path[j]][path[(j + 1) % n]];
+                const d2 =
+                  dist[path[i - 1]][path[j]] + dist[path[i]][path[(j + 1) % n]];
+                if (d2 < d1 - 0.0001) {
+                  path.splice(i, j - i + 1, ...path.slice(i, j + 1).reverse());
+                  improved = true;
+                  steps.push({
+                    path: [...path, 0],
+                    label: "2-opt swap — " + tourDist(path).toFixed(2) + " km",
+                  });
+                }
+              }
+            }
+            iter++;
+          }
+          steps.push({
+            path: [...path, 0],
+            label: "Done — " + tourDist(path).toFixed(2) + " km",
+          });
+          return steps;
+        }
+
+        // Brute Force (for n=10, we limit permutations)
+        function solveBrute() {
+          const steps = [];
+          let bestPath = null,
+            bestDist = Infinity;
+          const rest = Array.from({ length: n - 1 }, (_, i) => i + 1);
+          let count = 0;
+          const maxShow = 40; // only show some steps
+
+          function permute(arr, l, r) {
+            if (l === r) {
+              const p = [0, ...arr];
+              const d = tourDist(p);
+              count++;
+              if (d < bestDist) {
+                bestDist = d;
+                bestPath = [...p];
+                steps.push({
+                  path: [...p, 0],
+                  label: "New best (" + count + ") — " + d.toFixed(2) + " km",
+                });
+              } else if (steps.length < maxShow && count % 5000 === 0) {
+                steps.push({
+                  path: [...p, 0],
+                  label: "Checking (" + count + ")...",
+                });
+              }
+              return;
+            }
+            for (let i = l; i <= r; i++) {
+              [arr[l], arr[i]] = [arr[i], arr[l]];
+              permute(arr, l + 1, r);
+              [arr[l], arr[i]] = [arr[i], arr[l]];
+            }
+          }
+          permute(rest, 0, rest.length - 1);
+          steps.push({
+            path: [...bestPath, 0],
+            label:
+              "Optimal — " + bestDist.toFixed(2) + " km (" + count + " tours)",
+          });
+          return steps;
+        }
+
+        function getThemeColors() {
+          const t = THEMES[currentTheme];
+          return {
+            bg: t.bg,
+            text: t.text,
+            muted: t.textMuted,
+            dim: t.textDim,
+            accent: t.accent,
+            border: t.border,
+          };
+        }
+
+        window.drawTSP = function () {
+          const c = getThemeColors();
+          ctx.clearRect(0, 0, W, H);
+
+          // Draw current tour edges
+          if (tour.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(locations[tour[0]].x, locations[tour[0]].y);
+            for (let i = 1; i < tour.length; i++) {
+              ctx.lineTo(locations[tour[i]].x, locations[tour[i]].y);
+            }
+            ctx.strokeStyle = c.accent;
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.6;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+
+          // Draw locations
+          for (let i = 0; i < n; i++) {
+            const l = locations[i];
+            ctx.beginPath();
+            ctx.arc(l.x, l.y, l.start ? 8 : 5, 0, 2 * Math.PI);
+            ctx.fillStyle = l.start ? c.accent : c.muted;
+            ctx.fill();
+            if (l.start) {
+              ctx.strokeStyle = c.accent;
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+          }
+
+          // Labels
+          ctx.font = "11px -apple-system, BlinkMacSystemFont, sans-serif";
+          ctx.fillStyle = c.dim;
+          ctx.textAlign = "left";
+          for (let i = 0; i < n; i++) {
+            ctx.fillText(
+              locations[i].name,
+              locations[i].x + 10,
+              locations[i].y + 4,
+            );
+          }
+
+          // Status
+          if (animSteps.length > 0 && animIdx < animSteps.length) {
+            ctx.fillStyle = c.muted;
+            ctx.font = "12px -apple-system, BlinkMacSystemFont, sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(animSteps[animIdx].label, 10, H - 10);
+          }
+        };
+
+        function runAnimation() {
+          if (animRunning) return;
+          const algo = document.getElementById("algoSelect").value;
+          if (algo === "nearest") animSteps = solveNN();
+          else if (algo === "2opt") animSteps = solve2Opt();
+          else animSteps = solveBrute();
+          animIdx = 0;
+          animRunning = true;
+          stepAnimation();
+        }
+
+        function stepAnimation() {
+          if (animIdx >= animSteps.length) {
+            animRunning = false;
+            return;
+          }
+          tour = animSteps[animIdx].path;
+          drawTSP();
+          animIdx++;
+          animTimer = setTimeout(stepAnimation, (1000 / speed) * 2);
+        }
+
+        function resetTSP() {
+          animRunning = false;
+          if (animTimer) clearTimeout(animTimer);
+          tour = [];
+          animSteps = [];
+          animIdx = 0;
+          drawTSP();
+        }
+
+        document
+          .getElementById("runBtn")
+          .addEventListener("click", runAnimation);
+        document
+          .getElementById("resetTspBtn")
+          .addEventListener("click", resetTSP);
+        document
+          .getElementById("speedSlider")
+          .addEventListener("input", function () {
+            speed = parseInt(this.value);
+            document.getElementById("speedValue").textContent = speed;
+          });
+
+        // Expose distances for comparison chart
+        window.TSP_RESULTS = {
+          nn: tourDist(solveNN().slice(-1)[0].path.slice(0, -1)),
+          twoOpt: tourDist(solve2Opt().slice(-1)[0].path.slice(0, -1)),
+          brute: tourDist(solveBrute().slice(-1)[0].path.slice(0, -1)),
+        };
+
+        drawTSP();
+      })();
+    </script>
+
+    <script>
+      // ═══════════════════════════════════════════════════════════════
+      // Distance Comparison Bar Chart
+      // ═══════════════════════════════════════════════════════════════
+      (function () {
+        const canvas = document.getElementById("comparisonCanvas");
+        const ctx = canvas.getContext("2d");
+        const W = canvas.width,
+          H = canvas.height;
+
+        window.drawComparison = function () {
+          const t = THEMES[currentTheme];
+          const results = window.TSP_RESULTS || {
+            nn: 8.2,
+            twoOpt: 6.8,
+            brute: 6.5,
+          };
+          const data = [
+            {
+              label: "Nearest Neighbor",
+              value: results.nn,
+              color: t.textMuted,
+            },
+            { label: "2-Opt", value: results.twoOpt, color: t.accent },
+            { label: "Brute Force", value: results.brute, color: t.accent },
+          ];
+
+          ctx.clearRect(0, 0, W, H);
+
+          const pad = { top: 30, right: 40, bottom: 30, left: 140 };
+          const pw = W - pad.left - pad.right;
+          const ph = H - pad.top - pad.bottom;
+          const barH = (ph / data.length) * 0.6;
+          const gap = ph / data.length;
+          const maxVal = Math.max(...data.map((d) => d.value)) * 1.15;
+
+          // Bars
+          for (let i = 0; i < data.length; i++) {
+            const y = pad.top + i * gap + (gap - barH) / 2;
+            const barW = (data[i].value / maxVal) * pw;
+
+            // Bar
+            ctx.fillStyle = data[i].color;
+            ctx.globalAlpha = i === 0 ? 0.4 : 0.8;
+            ctx.fillRect(pad.left, y, barW, barH);
+            ctx.globalAlpha = 1;
+
+            // Label
+            ctx.fillStyle = t.text;
+            ctx.font = "12px -apple-system, BlinkMacSystemFont, sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText(data[i].label, pad.left - 12, y + barH / 2 + 4);
+
+            // Value
+            ctx.fillStyle = t.textMuted;
+            ctx.font = "11px SF Mono, Fira Code, monospace";
+            ctx.textAlign = "left";
+            ctx.fillText(
+              data[i].value.toFixed(2) + " km",
+              pad.left + barW + 8,
+              y + barH / 2 + 4,
+            );
+          }
+
+          // Axis line
+          ctx.strokeStyle = t.border;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(pad.left, pad.top - 5);
+          ctx.lineTo(pad.left, pad.top + ph + 5);
+          ctx.stroke();
+        };
+
+        drawComparison();
+      })();
+    </script>
+  </body>
+</html>
